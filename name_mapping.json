@@ -1,0 +1,439 @@
+{
+  "version": "2026-08-23",
+  "source": "PRTS Wiki + 萌娘百科 + 剧情数据挖掘交叉验证",
+  "note": "说话者名 → 干员代号映射，用于关系图谱数据归一化",
+  "confirmed": {
+    "恩希欧迪斯": {
+      "operator": "银灰",
+      "real_name": "恩希欧迪斯·希瓦艾什",
+      "confidence": "confirmed"
+    },
+    "恩雅": {
+      "operator": "初雪",
+      "real_name": "恩雅·希瓦艾什",
+      "confidence": "confirmed"
+    },
+    "恩希亚": {
+      "operator": "崖心",
+      "real_name": "恩希亚·希瓦艾什",
+      "confidence": "confirmed"
+    },
+    "诺希斯": {
+      "operator": "灵知",
+      "real_name": "诺希斯·埃德怀斯",
+      "confidence": "confirmed"
+    },
+    "费德里科": {
+      "operator": "送葬人",
+      "real_name": "费德里科·吉亚洛",
+      "confidence": "confirmed"
+    },
+    "阿尔图罗": {
+      "operator": "塑心",
+      "real_name": "阿尔图罗·吉亚洛",
+      "confidence": "confirmed"
+    },
+    "艾泽尔": {
+      "operator": "见行者",
+      "real_name": "艾泽尔",
+      "confidence": "confirmed"
+    },
+    "席德佳": {
+      "operator": "空弦",
+      "real_name": "席德佳",
+      "confidence": "confirmed"
+    },
+    "拉维妮娅": {
+      "operator": "斥罪",
+      "real_name": "拉维妮娅·法尔科内",
+      "confidence": "confirmed"
+    },
+    "莱昂图索": {
+      "operator": "伺夜",
+      "real_name": "莱昂图索·贝洛内",
+      "confidence": "confirmed"
+    },
+    "维娜": {
+      "operator": "推进之王",
+      "real_name": "亚历山德莉娜·维娜·维多利亚",
+      "confidence": "confirmed"
+    },
+    "费斯特": {
+      "operator": "白铁",
+      "real_name": "费斯特",
+      "confidence": "confirmed"
+    },
+    "简妮": {
+      "operator": "琴柳",
+      "real_name": "简妮",
+      "confidence": "confirmed"
+    },
+    "伊莎贝尔": {
+      "operator": "达格达",
+      "real_name": "伊莎贝尔·\"达格达\"·孟塔古",
+      "confidence": "confirmed"
+    },
+    "玛嘉烈": {
+      "operator": "耀骑士临光",
+      "real_name": "玛嘉烈·临光",
+      "confidence": "confirmed"
+    },
+    "玛莉娅": {
+      "operator": "瑕光",
+      "real_name": "玛莉娅·临光",
+      "confidence": "confirmed"
+    },
+    "佐菲娅": {
+      "operator": "鞭刃",
+      "real_name": "佐菲娅·临光",
+      "confidence": "confirmed"
+    },
+    "索娜": {
+      "operator": "焰尾",
+      "real_name": "索娜",
+      "confidence": "confirmed"
+    },
+    "格蕾纳蒂": {
+      "operator": "灰毫",
+      "real_name": "格蕾纳蒂",
+      "confidence": "confirmed"
+    },
+    "艾沃娜": {
+      "operator": "野鬃",
+      "real_name": "艾沃娜",
+      "confidence": "confirmed"
+    },
+    "查丝汀娜": {
+      "operator": "远牙",
+      "real_name": "查丝汀娜",
+      "confidence": "confirmed"
+    },
+    "乔迪": {
+      "operator": "流明",
+      "real_name": "乔迪·方塔纳罗萨",
+      "confidence": "confirmed"
+    },
+    "埃琳娜": {
+      "operator": "星源",
+      "real_name": "埃琳娜",
+      "confidence": "confirmed"
+    },
+    "阿黛尔": {
+      "operator": "艾雅法拉",
+      "real_name": "阿黛尔·瑙曼",
+      "confidence": "confirmed"
+    },
+    "拉芙希妮": {
+      "operator": "苇草",
+      "real_name": "拉芙希妮",
+      "confidence": "confirmed"
+    },
+    "爱布拉娜": {
+      "operator": "死芒",
+      "real_name": "爱布拉娜",
+      "confidence": "confirmed"
+    },
+    "柳德米拉": {
+      "operator": "弑君者",
+      "real_name": "柳德米拉·伊里尼奇娜",
+      "confidence": "confirmed"
+    },
+    "娜塔莉娅": {
+      "operator": "早露",
+      "real_name": "娜塔莉娅·安德烈耶夫娜·罗斯托娃",
+      "confidence": "confirmed"
+    },
+    "罗莎琳": {
+      "operator": "烈夏",
+      "real_name": "罗莎琳",
+      "confidence": "confirmed"
+    },
+    "索尼娅": {
+      "operator": "凛冬",
+      "real_name": "索尼娅",
+      "confidence": "confirmed"
+    },
+    "安娜": {
+      "operator": "真理",
+      "real_name": "安娜",
+      "confidence": "confirmed"
+    },
+    "Logos": {
+      "operator": "逻各斯",
+      "real_name": "Logos，真名哀珐尼尔",
+      "confidence": "confirmed"
+    },
+    "哀珐尼尔": {
+      "operator": "逻各斯",
+      "real_name": "Logos，真名哀珐尼尔",
+      "confidence": "confirmed"
+    },
+    "伊西多": {
+      "operator": "引星棘刺",
+      "real_name": "伊西多（棘刺异格）",
+      "confidence": "confirmed"
+    },
+    "林雨霞": {
+      "operator": "林",
+      "real_name": "林雨霞",
+      "confidence": "confirmed"
+    },
+    "苏茜": {
+      "operator": "澄闪",
+      "real_name": "苏茜",
+      "confidence": "confirmed"
+    },
+    "海伦娜": {
+      "operator": "冰酿",
+      "real_name": "海伦娜（本名安娜·米特朗）",
+      "confidence": "confirmed"
+    },
+    "维什戴尔": {
+      "operator": "W",
+      "real_name": "维什戴尔（W本名）",
+      "confidence": "confirmed"
+    },
+    "克丽斯腾": {
+      "operator": "克丽斯腾",
+      "real_name": "克里斯滕·莱特（NPC→已实装干员）",
+      "confidence": "confirmed"
+    },
+    "乌尔比安": {
+      "operator": "乌尔比安",
+      "real_name": "乌尔比安",
+      "confidence": "confirmed"
+    },
+    "玫拉": {
+      "operator": "玫拉",
+      "real_name": "玫拉 (Melanite)",
+      "confidence": "confirmed"
+    },
+    "斯普莉雅": {
+      "operator": "空构",
+      "real_name": "斯普莉雅 (Serpilia/Spuria)",
+      "confidence": "confirmed"
+    }
+  },
+  "high_confidence": {
+    "古米": {
+      "operator": "古米",
+      "real_name": "拉达·克利莫夫娜·瓦卢耶娃",
+      "confidence": "high"
+    },
+    "魏彦吾": {
+      "operator": "魏彦吾",
+      "real_name": "龙门近卫局实际控制者（NPC）",
+      "confidence": "high"
+    },
+    "塔露拉": {
+      "operator": "塔露拉",
+      "real_name": "塔露拉（整合运动领袖，未实装干员）",
+      "confidence": "high"
+    },
+    "霜星": {
+      "operator": "霜星",
+      "real_name": "霜星（整合运动雪怪小队，未实装）",
+      "confidence": "high"
+    },
+    "爱国者": {
+      "operator": "爱国者",
+      "real_name": "博卓卡斯替（整合运动，未实装）",
+      "confidence": "high"
+    },
+    "特蕾西娅": {
+      "operator": "特蕾西娅",
+      "real_name": "特蕾西娅（萨卡兹魔王，未实装，魔王为其辅助干员形态）",
+      "confidence": "high"
+    },
+    "特雷西斯": {
+      "operator": "特雷西斯",
+      "real_name": "特雷西斯（萨卡兹摄政王，NPC）",
+      "confidence": "high"
+    },
+    "菈塔托丝": {
+      "operator": "菈塔托丝",
+      "real_name": "布朗陶家族长女（NPC）",
+      "confidence": "high"
+    },
+    "阿克托斯": {
+      "operator": "阿克托斯",
+      "real_name": "希瓦艾什家族管家/亲信（NPC）",
+      "confidence": "high"
+    },
+    "麟青砚": {
+      "operator": "麟青砚",
+      "real_name": "大炎岁片相关NPC",
+      "confidence": "high"
+    },
+    "布兰都斯": {
+      "operator": "布兰都斯",
+      "real_name": "阿戈尔/深海NPC",
+      "confidence": "high"
+    }
+  },
+  "needs_user": {},
+  "resolved": {
+    "特蕾西娅": {
+      "verdict": "本体=独立NPC(已死亡)；魔王=独立干员(不映射到特蕾西娅)",
+      "relation": "干员[魔王 Civilight Eterna]是特蕾西娅生前写入黑王冠的独立智能程序/投影镜像，拥有其外貌与记忆，但自称非本人，人格独立，使命为守护阿米娅。",
+      "mapping": null,
+      "notes": "魔王在角色库中已有独立条目；特蕾西娅本体作为NPC节点入图，与魔王节点用「生成源/本体-投影」虚线连接。"
+    },
+    "塔露拉": {
+      "verdict": "独立NPC条目，playable=false",
+      "identity": "主线核心NPC、旧整合运动领袖、德拉克、科西切(黑蛇)曾经容器",
+      "tags": [
+        "卫星角色",
+        "未来存在干员实装可能性"
+      ],
+      "future_playable": true,
+      "mapping": null,
+      "notes": "截至当前官方正式公告，塔露拉·雅特利亚斯仍未实装可玩干员；网传2025落地均为谣言。历史先例：W先为BOSS-NPC，官宣后再新增干员条目。塔露拉现处W实装之前的卫星阶段。一旦官宣落地，再拆分新建独立干员条目并配置双向关联（参考W数据结构）。"
+    },
+    "普瑞赛斯": {
+      "verdict": "独立NPC条目，playable=false",
+      "identity": "前文明人类",
+      "tags": [
+        "前文明关键人物",
+        "源石项目",
+        "PRTS",
+        "博士相关"
+      ],
+      "future_playable": "unknown",
+      "mapping": null,
+      "notes": "官方至今完全没有任何自机暗示，优先级属于世界观基底NPC，卫星信号极弱。不录入干员库characters.json。"
+    },
+    "曼弗雷德": {
+      "verdict": "独立NPC条目，playable=false",
+      "identity": "萨卡兹王庭军/卡兹戴尔军事委员会高级指挥官，特雷西斯麾下",
+      "tags": [
+        "伦蒂尼姆",
+        "特雷西斯嫡系将领",
+        "BOSS角色",
+        "食腐者王庭成员"
+      ],
+      "playable": false,
+      "future_playable": false,
+      "mapping": null,
+      "related": [
+        "特雷西斯",
+        "赫德雷",
+        "明椒",
+        "阿斯卡纶"
+      ],
+      "notes": "主线10-13章伦蒂尼姆篇重量级角色、BOSS单位。剧情存活被俘；只有敌方战斗模型，没有干员档案、卡池、自机语音。玩家高实装期待不等于官方卫星信号。当前无官方实装线索，暂归类纯剧情NPC；后续如有鹰角官宣，再拆分新建独立干员条目，双向绑定NPC源节点。"
+    },
+    "血魔大君": {
+      "char_id": "npc_dukare",
+      "name": "杜卡雷",
+      "alias": [
+        "血魔大君",
+        "君主之红"
+      ],
+      "race": "萨卡兹-血魔",
+      "faction": "萨卡兹王庭 / 卡兹戴尔军事委员会",
+      "playable": false,
+      "future_playable": false,
+      "future_note": "人气较高、剧情留有回归伏笔，但现阶段没有任何官方卫星信号，归类纯剧情NPC；后续鹰角官宣实装时，再拆分独立干员条目并双向关联此NPC源节点",
+      "tags": [
+        "伦蒂尼姆主线",
+        "BOSS角色",
+        "鲜血王庭",
+        "提卡兹之血"
+      ],
+      "related_characters": [
+        "特雷西斯",
+        "曼弗雷德",
+        "Logos",
+        "阿米娅"
+      ],
+      "verdict": "独立NPC条目，playable=false",
+      "notes": "主线10-13章伦蒂尼姆核心BOSS、萨卡兹鲜血王庭之主、特雷西斯军事委员会成员。结局坠入时空乱流、本体未完全消亡，留有回归伏笔。无干员档案、自机语音、卡池资源，仅敌方BOSS战斗模型。不加入characters.json干员库。"
+    },
+    "变形者集群": {
+      "char_id": "npc_damazti",
+      "name": "变形者集群",
+      "alias": [
+        "千面",
+        "大变老师",
+        "茉莉"
+      ],
+      "race": "萨卡兹-变形者",
+      "faction": "萨卡兹王庭 / 变形者王庭",
+      "playable": false,
+      "future_playable": false,
+      "future_note": "特殊集群意识生命体，无固定单一人格；现阶段完全无实装线索，理论上做成常规自机干员难度极高。未来官方若有特殊形式实装公告，再另行评估",
+      "tags": [
+        "伦蒂尼姆主线",
+        "BOSS角色",
+        "十王庭",
+        "集群意识",
+        "同构碎片",
+        "拟态"
+      ],
+      "related_characters": [
+        "特雷西斯",
+        "杜卡雷",
+        "曼弗雷德",
+        "Logos"
+      ],
+      "verdict": "独立NPC条目，playable=false",
+      "notes": "主线10-12-13章敌方BOSS，无干员档案/自机语音/实装卫星。本体为蜂巢式集群意识，非单一独立个体，无固定人格，由无数同构碎片组成，可分裂、拟态、意识迁移，天然难以包装成常规可操控干员。剧情结局分裂成两大意识分支，存在后续再登场可能性，但优先以BOSS/NPC形式回归。不录入characters.json干员库。"
+    },
+    "休露丝": {
+      "verdict": "独立NPC条目，playable=false",
+      "identity": "谢拉格布朗陶家族二女，菈塔托丝之妹、尤卡坦之妻",
+      "tags": [
+        "谢拉格",
+        "布朗陶家族",
+        "风雪过境",
+        "银心湖列车"
+      ],
+      "playable": false,
+      "future_playable": false,
+      "mapping": null,
+      "notes": "风雪过境/银心湖列车/吾导先路登场。不在角色库，不入干员映射。"
+    },
+    "伊雷妮": {
+      "verdict": "独立NPC条目，playable=false",
+      "identity": "叙拉古新沃尔西尼卡车司机互助会会长",
+      "tags": [
+        "叙拉古",
+        "揭幕者们",
+        "卡车互助会",
+        "鲁珀"
+      ],
+      "playable": false,
+      "future_playable": false,
+      "mapping": null,
+      "notes": "揭幕者们活动重要角色，与拉维妮娅(斥罪)、莱昂图索(伺夜)、弑君者关联。不在角色库，不入干员映射。"
+    },
+    "戈尔丁": {
+      "verdict": "独立NPC条目，playable=false",
+      "identity": "维多利亚伦蒂尼姆圣马尔索学校教师，海蒂旧识",
+      "tags": [
+        "维多利亚",
+        "伦蒂尼姆",
+        "自救军",
+        "教师"
+      ],
+      "playable": false,
+      "future_playable": false,
+      "mapping": null,
+      "notes": "主线11-12章角色，剧情中已自杀（在变形者见证下）。不在角色库，不入干员映射。"
+    },
+    "薇尔丽芙": {
+      "verdict": "独立NPC条目，playable=false",
+      "identity": "拉特兰公证所官员，菲亚梅塔上级",
+      "tags": [
+        "拉特兰",
+        "公证所",
+        "吾导先路"
+      ],
+      "playable": false,
+      "future_playable": false,
+      "mapping": null,
+      "notes": "出现在菲亚梅塔模组文本中，是菲亚梅塔的上级而非本人。不在角色库，不入干员映射。"
+    }
+  }
+}

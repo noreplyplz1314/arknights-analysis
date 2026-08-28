@@ -1,0 +1,22 @@
+# ===== Python =====
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.ipynb_checkpoints/
+
+# ===== 头像资源 =====
+# avatars/ 已纳入版本管理（由 avatars.zip 解压得到），克隆即可直接使用。
+
+# ===== 临时 / 辅助脚本 =====
+_dl*.ps1
+*.tmp
+*.bak
+*.log
+
+# ===== 系统 / 编辑器 =====
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp

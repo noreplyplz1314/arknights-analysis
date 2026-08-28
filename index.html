@@ -1,0 +1,2179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>明日方舟 · 人物关系图谱 & 剧情时间线</title>
+<script src="echarts.min.js"></script>
+<style>
+:root {
+  --bg: #0f1216;
+  --panel: #1a1f26;
+  --panel2: #222832;
+  --border: #2c3440;
+  --text: #d6dde6;
+  --text-dim: #8a96a3;
+  --accent: #e0b36a;
+  --accent2: #7aa2d9;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  height: 100vh;
+}
+#app { display:flex; flex-direction:column; height:100vh; }
+
+/* ====== 顶部导航 ====== */
+#topbar {
+  height: 48px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 16px;
+  flex-shrink: 0;
+}
+#topbar h1 { font-size: 16px; color: var(--accent); letter-spacing: 1px; white-space: nowrap; }
+#topbar .subtitle { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
+.nav-tabs { display: flex; gap: 4px; margin-left: auto; }
+.nav-tab {
+  padding: 8px 18px;
+  font-size: 13px;
+  color: var(--text-dim);
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: 6px 6px 0 0;
+  transition: all .2s;
+  background: transparent;
+}
+.nav-tab.active {
+  color: var(--accent);
+  background: var(--bg);
+  border-color: var(--border);
+  border-bottom-color: var(--bg);
+}
+
+/* ====== 主体 ====== */
+#body { flex: 1; display: flex; overflow: hidden; position: relative; }
+
+/* --- 图谱视图 --- */
+#graphView { flex: 1; display: flex; overflow: hidden; }
+#sidebar {
+  width: 300px;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+#sidebar::-webkit-scrollbar { width: 6px; }
+#sidebar::-webkit-scrollbar-thumb { background: #333c48; border-radius: 3px; }
+
+.ctrl-group { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.ctrl-group h3 { font-size: 12px; color: var(--text-dim); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+
+#searchBox {
+  width: 100%; padding: 8px 12px; background: var(--panel2);
+  border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text); font-size: 13px; outline: none;
+}
+#searchBox:focus { border-color: var(--accent); }
+
+.view-toggle { display:flex; gap:8px; }
+.view-btn {
+  flex: 1; padding: 7px 0; background: var(--panel2);
+  border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text-dim); cursor: pointer; font-size: 12px; transition: all .2s;
+}
+.view-btn.active { background: rgba(224,179,106,.15); border-color: var(--accent); color: var(--accent); }
+
+.filter-row { margin-bottom: 10px; }
+.filter-label { font-size: 12px; color: var(--text-dim); margin-bottom: 6px; }
+.filter-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  padding: 3px 10px; font-size: 11px; background: var(--panel2);
+  border: 1px solid var(--border); border-radius: 12px; cursor: pointer;
+  color: var(--text-dim); transition: all .2s;
+}
+.chip.active { background: rgba(224,179,106,.18); border-color: var(--accent); color: var(--accent); }
+.chip.off { opacity: .4; }
+
+input[type="range"] { width: 100%; accent-color: var(--accent); background: transparent; margin-top: 4px; }
+.range-val { font-size: 11px; color: var(--accent); text-align: right; margin-top: 2px; }
+
+.stat-box { padding: 12px 16px; }
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.stat-item { background: var(--panel2); border: 1px solid var(--border); border-radius: 6px; padding: 10px; text-align: center; }
+.stat-item .num { font-size: 20px; font-weight: bold; color: var(--accent); }
+.stat-item .lbl { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+
+.legend-box { padding: 12px 16px; }
+.legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; color: var(--text-dim); }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(255,255,255,.15); }
+.legend-line { flex:1; height: 2px; background: var(--border); position: relative; }
+.legend-line::after { content:''; position:absolute; left:0; top:-1px; width:100%; height:3px; background: linear-gradient(90deg,#3a4450,var(--accent)); }
+
+.help-box { padding: 12px 16px; font-size: 11px; color: var(--text-dim); line-height: 1.7; }
+.help-box b { color: var(--accent2); }
+
+#main { flex: 1; position: relative; min-width: 0; }
+#chart { width: 100%; height: 100%; }
+
+/* 左上角人物悬浮小卡（点选模式） */
+#nodeFloatCard {
+  position: absolute; top: 16px; left: 16px; width: 280px;
+  background: rgba(26,31,38,.96); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px; display: none;
+  box-shadow: 0 8px 30px rgba(0,0,0,.5); backdrop-filter: blur(8px);
+  z-index: 9;
+}
+#nodeFloatCard.show { display: block; }
+.nfc-head, .rf-head { cursor: grab; user-select: none; }
+.nfc-head:active, .rf-head:active { cursor: grabbing; }
+.nfc-close { position:absolute; top:10px; right:12px; cursor:pointer; color:var(--text-dim); font-size:16px; background:none; border:none; }
+.nfc-close:hover { color: var(--text); }
+.nfc-name { font-size: 17px; color: var(--accent); font-weight: bold; padding-right: 20px; }
+.nfc-faction { font-size: 11px; color: var(--accent2); margin: 4px 0 8px; }
+.nfc-profile { font-size: 12px; color: #aab4c0; line-height: 1.6; }
+.nfc-sec { font-size: 11px; color: var(--text-dim); margin: 10px 0 6px; }
+.nfc-rels { display: flex; flex-wrap: wrap; gap: 5px; }
+.nfc-rel-chip {
+  font-size: 10px; padding: 2px 8px; background: var(--panel2);
+  border: 1px solid var(--border); border-radius: 10px; color: var(--text); cursor: pointer;
+}
+.nfc-rel-chip:hover { border-color: var(--accent); color: var(--accent); }
+.nfc-hint { margin-top: 10px; font-size: 10px; color: #5c6670; }
+
+/* 详情卡 */
+#detailCard {
+  position: absolute; top: 16px; right: 16px; width: 300px;
+  background: rgba(26,31,38,.96); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px; display: none;
+  box-shadow: 0 8px 30px rgba(0,0,0,.5); backdrop-filter: blur(8px);
+  max-height: calc(100vh - 80px); overflow-y: auto; z-index: 10;
+}
+#detailCard.show { display: block; }
+.dc-close { position:absolute; top:10px; right:12px; cursor:pointer; color:var(--text-dim); font-size:16px; background:none; border:none; }
+
+/* 关系浮窗（点击连线） */
+#relFloat {
+  position: absolute; width: 340px; display: none;
+  background: rgba(26,31,38,.97); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px;
+  box-shadow: 0 12px 44px rgba(0,0,0,.62); backdrop-filter: blur(8px);
+  z-index: 12;
+}
+#relFloat.show { display: block; }
+.rf-close { position: absolute; top: 10px; right: 12px; cursor: pointer; color: var(--text-dim); font-size: 16px; background: none; border: none; z-index: 2; }
+.rf-close:hover { color: var(--text); }
+.rf-head { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; flex-wrap: wrap; padding-right: 22px; }
+.rf-ava { width: 30px; height: 30px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border); flex-shrink: 0; }
+.rf-ava.placeholder {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 13px; color: #fff; font-weight: bold;
+}
+.rf-name { font-size: 13px; color: var(--accent); font-weight: bold; }
+.rf-rel-tag {
+  font-size: 10px; padding: 2px 8px; border-radius: 10px;
+  background: rgba(224,179,106,.15); color: var(--accent);
+  border: 1px solid rgba(224,179,106,.35); flex-shrink: 0;
+}
+.rf-sec { font-size: 11px; color: var(--text-dim); margin: 10px 0 6px; font-weight: bold; letter-spacing: .5px; }
+.rf-card {
+  display: block; width: 100%; text-align: left;
+  background: var(--panel2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; cursor: pointer;
+  font-size: 12px; color: var(--text); line-height: 1.5; font-family: inherit;
+}
+.rf-card:hover { border-color: var(--accent); background: rgba(122,162,217,.08); }
+.rf-card .rf-card-src { font-size: 10px; color: var(--accent2); margin-bottom: 2px; }
+.rf-card .rf-card-title { font-size: 11px; color: var(--text-dim); margin-bottom: 2px; }
+.rf-card .rf-card-sum {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.rf-empty { font-size: 11px; color: #5c6670; padding: 6px 2px; }
+.rf-close-tip { font-size: 10px; color: #5c6670; margin-top: 8px; text-align: right; }
+
+/* 关系详情面板（右侧侧边栏）：左=章节剧情目录，右=详情内容 */
+#relDetailPanel {
+  position: absolute; top: 16px; right: 16px; width: 620px;
+  background: rgba(26,31,38,.97); border: 1px solid var(--border);
+  border-radius: 10px; display: none; flex-direction: row;
+  box-shadow: 0 8px 30px rgba(0,0,0,.5); backdrop-filter: blur(8px);
+  max-height: calc(100vh - 80px); z-index: 11; overflow: hidden;
+}
+#relDetailPanel.show { display: flex; }
+.rdp-close { position: absolute; top: 10px; right: 12px; cursor: pointer; color: var(--text-dim); font-size: 16px; background: none; border: none; z-index: 2; }
+.rdp-close:hover { color: var(--text); }
+#rdpToc {
+  width: 176px; flex-shrink: 0; display: none;
+  border-right: 1px solid var(--border); background: rgba(15,19,24,.6);
+  overflow-y: auto; padding: 12px 8px 16px; box-sizing: border-box;
+}
+#rdpToc.show { display: block; }
+.rdp-toc-head { font-size: 11px; color: var(--accent); font-weight: bold; padding: 2px 6px 8px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
+.rdp-toc-item { font-size: 11px; color: #8a94a0; padding: 5px 8px; border-radius: 5px; cursor: pointer; line-height: 1.4; margin-bottom: 2px; }
+.rdp-toc-item:hover { background: rgba(255,255,255,.06); color: var(--text); }
+.rdp-toc-item.active { background: rgba(224,179,106,.15); color: var(--accent); font-weight: bold; }
+.rdp-toc-item .o { color: #5c6670; font-size: 10px; margin-right: 4px; }
+#rdpBody { flex: 1; min-width: 0; overflow-y: auto; padding: 16px; }
+.rdp-head { margin-bottom: 10px; }
+.rdp-title { font-size: 15px; color: var(--accent); font-weight: bold; padding-right: 24px; }
+.rdp-sub { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+.rdp-body-text { font-size: 12px; color: #aab4c0; line-height: 1.9; white-space: pre-wrap; }
+.rdp-dlg { margin-bottom: 10px; }
+.rdp-dlg-speaker { font-size: 12px; color: var(--accent2); font-weight: bold; margin-bottom: 2px; }
+.rdp-dlg-speaker.narr { color: #5c6670; font-weight: normal; font-style: italic; }
+.rdp-dlg-text { font-size: 12px; color: #aab4c0; line-height: 1.7; }
+.rdp-dlg-narr { font-size: 12px; color: #7a8694; font-style: italic; line-height: 1.7; }
+.rdp-summary {
+  font-size: 12px; color: #c9b27e; line-height: 1.7; margin: 10px 0;
+  border-left: 3px solid var(--accent); padding-left: 10px;
+}
+.rdp-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.rdp-chip { font-size: 10px; padding: 2px 8px; background: var(--panel2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); }
+.dc-close:hover { color: var(--text); }
+.dc-name { font-size: 18px; color: var(--accent); font-weight: bold; }
+.dc-avatar { margin-bottom: 8px; }
+.dc-avatar-img {
+  width: 56px; height: 56px; border-radius: 12px; object-fit: cover;
+  border: 1px solid var(--border); background: var(--panel2);
+}
+.dc-avatar-img.placeholder {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 22px; color: #fff; font-weight: bold;
+}
+.nfc-head { display: flex; align-items: center; gap: 10px; }
+.nfc-avatar {
+  width: 40px; height: 40px; border-radius: 10px; object-fit: cover;
+  border: 1px solid var(--border); background: var(--panel2); flex-shrink: 0;
+}
+.nfc-avatar.placeholder {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 16px; color: #fff; font-weight: bold;
+}
+.dc-type { display:inline-block; font-size:10px; padding:2px 8px; border-radius:8px; margin:6px 0; }
+.dc-type.op { background: rgba(122,162,217,.2); color: var(--accent2); }
+.dc-type.npc { background: rgba(224,179,106,.15); color: var(--accent); }
+.dc-faction { font-size: 12px; color: var(--text-dim); margin-bottom: 8px; }
+.dc-stat { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin: 10px 0; }
+.dc-stat-item { background: var(--panel2); border-radius: 6px; padding: 8px 4px; text-align: center; }
+.dc-stat-item .n { font-size: 15px; color: var(--text); font-weight: bold; }
+.dc-stat-item .l { font-size: 10px; color: var(--text-dim); }
+.dc-sec { font-size: 12px; color: var(--accent2); margin: 12px 0 6px; }
+.dc-rel { display: flex; flex-wrap: wrap; gap: 6px; }
+.dc-rel-chip {
+  font-size: 11px; padding: 3px 10px; background: var(--panel2);
+  border: 1px solid var(--border); border-radius: 12px; cursor: pointer; color: var(--text);
+}
+.dc-rel-chip:hover { border-color: var(--accent); color: var(--accent); }
+.dc-alters { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.dc-alter-chip {
+  font-size: 10px; padding: 2px 8px; background: rgba(224,179,106,.1);
+  border: 1px solid rgba(224,179,106,.3); border-radius: 10px; color: var(--accent);
+}
+.dc-timeline-btn {
+  width: 100%; margin-top: 12px; padding: 9px 0;
+  background: rgba(224,179,106,.12); border: 1px solid var(--accent);
+  border-radius: 8px; color: var(--accent); font-size: 13px; cursor: pointer;
+  transition: all .2s;
+}
+.dc-timeline-btn:hover { background: rgba(224,179,106,.25); }
+
+/* --- 时间线视图 --- */
+#tlView { flex: 1; display: none; overflow: hidden; }
+#tlView.show { display: flex; }
+#tlSidebar {
+  width: 300px; background: var(--panel); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow-y: auto; flex-shrink: 0;
+}
+#tlMain { flex: 1; overflow-y: auto; padding: 20px 28px 60px; }
+#tlMain::-webkit-scrollbar { width: 8px; }
+#tlMain::-webkit-scrollbar-thumb { background: #333c48; border-radius: 4px; }
+
+.tl-char-list { padding: 8px 0; }
+.tl-char {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 16px; cursor: pointer; font-size: 13px;
+  color: var(--text-dim); transition: all .15s;
+  border-left: 3px solid transparent;
+}
+.tl-char:hover { background: var(--panel2); color: var(--text); }
+.tl-char.active { background: var(--panel2); color: var(--accent); border-left-color: var(--accent); }
+.tl-char .tag { font-size: 9px; padding: 1px 6px; border-radius: 8px; margin-left: auto; }
+.tl-char .tag.op { background: rgba(122,162,217,.2); color: var(--accent2); }
+.tl-char .tag.npc { background: rgba(224,179,106,.15); color: var(--accent); }
+.tl-avatar {
+  width: 26px; height: 26px; border-radius: 50%; object-fit: cover;
+  flex-shrink: 0; border: 1px solid rgba(255,255,255,.12); background: var(--panel2);
+}
+.tl-avatar.placeholder {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px; color: #fff; font-weight: bold;
+}
+
+.tl-header { margin-bottom: 24px; }
+.tl-header h2 { font-size: 22px; color: var(--accent); }
+.tl-header .sub { font-size: 12px; color: var(--text-dim); margin-top: 6px; line-height: 1.7; }
+.tl-summary {
+  display: flex; gap: 24px; margin-top: 14px; flex-wrap: wrap;
+  font-size: 12px; color: var(--text-dim);
+}
+.tl-summary b { color: var(--accent); font-size: 18px; }
+
+/* 时间线 */
+.timeline { position: relative; padding-left: 32px; }
+.timeline::before {
+  content: ''; position: absolute; left: 10px; top: 4px; bottom: 4px;
+  width: 2px; background: linear-gradient(180deg, var(--accent2), var(--accent), #5c6670);
+  opacity: .5;
+}
+.tl-item { position: relative; margin-bottom: 18px; }
+.tl-dot {
+  position: absolute; left: -28px; top: 16px; width: 12px; height: 12px;
+  border-radius: 50%; background: var(--accent); border: 2px solid var(--bg);
+  box-shadow: 0 0 0 2px var(--accent); z-index: 1;
+}
+.tl-dot.main { background: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.tl-dot.event { background: var(--accent2); box-shadow: 0 0 0 2px var(--accent2); }
+.tl-card {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 16px; transition: all .2s;
+}
+.tl-card:hover { border-color: var(--accent); box-shadow: 0 4px 16px rgba(0,0,0,.3); }
+.tl-card-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tl-order { font-size: 11px; color: var(--text-dim); font-family: monospace; }
+.tl-year {
+  font-size: 10px; padding: 1px 8px; border-radius: 10px;
+  background: rgba(195,150,120,.18); color: #d8a884;
+  font-family: monospace; white-space: nowrap;
+}
+.tl-segment {
+  font-size: 10px; padding: 2px 10px; border-radius: 10px;
+  background: rgba(122,162,217,.15); color: var(--accent2);
+}
+.tl-segment.main { background: rgba(224,179,106,.15); color: var(--accent); }
+.tl-stage { font-size: 14px; color: var(--text); font-weight: bold; }
+.tl-loc { font-size: 11px; color: var(--text-dim); }
+.tl-line {
+  margin-top: 10px; padding: 10px 12px;
+  background: var(--panel2); border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0; font-size: 12px; color: var(--text);
+  line-height: 1.7;
+}
+.tl-line::before { content: '▸ '; color: var(--accent); }
+.tl-co { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.tl-co-label { font-size: 11px; color: var(--text-dim); margin-right: 4px; }
+.tl-co-chip {
+  font-size: 11px; padding: 2px 10px; background: var(--panel2);
+  border: 1px solid var(--border); border-radius: 12px; cursor: pointer; color: var(--text);
+}
+.tl-co-chip:hover { border-color: var(--accent); color: var(--accent); }
+
+/* 时间线筛选条 */
+.tl-filterbar {
+  position: sticky; top: 0; z-index: 5;
+  background: var(--panel); border-bottom: 1px solid var(--border);
+  padding: 12px 28px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+}
+.tl-filterbar select, .tl-filterbar input {
+  background: var(--panel2); border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px 12px; color: var(--text); font-size: 12px; outline: none;
+}
+.tl-filterbar select:focus, .tl-filterbar input:focus { border-color: var(--accent); }
+.tl-filter-label { font-size: 12px; color: var(--text-dim); }
+
+/* 显示模式切换（单列 / 树状） */
+.tl-mode-switch {
+  display: inline-flex; border: 1px solid var(--border); border-radius: 6px;
+  overflow: hidden; margin-right: 10px; vertical-align: middle;
+}
+.tl-mode-btn {
+  background: var(--panel); color: var(--text-dim); border: none;
+  padding: 5px 14px; font-size: 12px; cursor: pointer; transition: all .15s;
+}
+.tl-mode-btn + .tl-mode-btn { border-left: 1px solid var(--border); }
+.tl-mode-btn.active { background: var(--accent); color: #fff; }
+
+/* ====== 树状双列时间线 ====== */
+.tl-tree { margin-top: 12px; }
+.tl-tree-head {
+  display: flex; border-bottom: 2px solid var(--border);
+  padding-bottom: 6px; margin-bottom: 2px; position: sticky; top: 0;
+  background: var(--panel); z-index: 3;
+}
+.tl-tree-scale-h { width: 64px; flex-shrink: 0; font-size: 11px; color: var(--text-dim); text-align: center; }
+.tl-tree-col-h {
+  flex: 1; min-width: 0; text-align: center; font-size: 12px; font-weight: bold;
+  padding: 2px 0;
+}
+.tl-tree-col-h.main { color: var(--accent); }
+.tl-tree-col-h.event { color: var(--accent2); }
+.tl-tree-body { position: relative; }
+.tl-tree-row {
+  position: relative; display: flex;
+  border-bottom: 1px dashed rgba(127,140,158,.15);
+  padding: 10px 0;
+}
+.tl-tree-row::before {
+  content: ''; position: absolute; left: 63px; top: 0; bottom: 0;
+  width: 2px; background: rgba(122,162,217,.18);
+}
+.tl-tree-scale {
+  width: 64px; flex-shrink: 0; text-align: right; padding-right: 12px;
+  font-family: monospace; font-size: 10px; color: var(--text-dim);
+  display: flex; flex-direction: column; justify-content: flex-start; gap: 2px;
+}
+.tl-tree-scale .ts-year { color: #d8a884; font-size: 9px; }
+.tl-tree-lane { flex: 1; min-width: 0; padding: 0 10px; }
+.tl-tree-lane.main { border-right: 1px solid rgba(122,162,217,.15); }
+.tl-tree-lane .tl-card { margin-bottom: 0; }
+.tl-tree-lane.empty { color: var(--text-dim); font-size: 11px; display: flex; align-items: flex-start; padding-top: 8px; }
+
+.tl-empty { padding: 60px; text-align: center; color: var(--text-dim); font-size: 14px; }
+
+/* 无台词提示 */
+.tl-noline { margin-top: 10px; font-size: 11px; color: #5c6670; font-style: italic; }
+
+/* 时间线卡片交互 */
+.tl-card { cursor: pointer; position: relative; }
+.tl-card:hover { border-color: var(--accent); box-shadow: 0 4px 16px rgba(0,0,0,.3); }
+.tl-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.tl-btn {
+  font-size: 11px; padding: 4px 12px; cursor: pointer;
+  background: var(--panel2); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text-dim); transition: all .2s;
+}
+.tl-btn:hover { border-color: var(--accent); color: var(--accent); }
+.tl-btn.open { border-color: var(--accent); color: var(--accent); }
+
+/* 折叠的对话 */
+.tl-dialog {
+  margin-top: 8px; padding: 8px 10px 8px 12px;
+  background: rgba(122,162,217,.06);
+  border-left: 2px solid var(--accent2);
+  border-radius: 0 6px 6px 0;
+  font-size: 12px; color: var(--text); line-height: 1.7;
+  max-height: 200px; overflow-y: auto;
+}
+.tl-dialog .dlg-speaker { color: var(--accent2); font-weight: bold; margin-right: 6px; }
+.tl-dialog .dlg-speaker.self { color: var(--accent); }
+.tl-dialog .dlg-text { word-break: break-all; }
+.tl-dialog-line { margin-bottom: 6px; }
+
+/* 全幕对话侧栏 */
+#tlScenePanel {
+  width: 380px; background: var(--panel); border-left: 1px solid var(--border);
+  display: none; flex-direction: column; overflow: hidden; flex-shrink: 0;
+  position: relative;
+}
+#tlScenePanel.show { display: flex; }
+.sp-close {
+  position: absolute; top: 10px; right: 12px; cursor: pointer;
+  color: var(--text-dim); font-size: 16px; background: none; border: none; z-index: 2;
+}
+.sp-close:hover { color: var(--text); }
+
+/* 章节目录侧栏（剧情回溯） */
+#tlChapterPanel {
+  width: 320px; background: var(--panel); border-left: 1px solid var(--border);
+  display: none; flex-direction: column; overflow: hidden; flex-shrink: 0;
+  position: relative;
+}
+#tlChapterPanel.show { display: flex; }
+.cp-close { position: absolute; top: 10px; right: 12px; cursor: pointer; color: var(--text-dim); font-size: 16px; background: none; border: none; z-index: 2; }
+.cp-close:hover { color: var(--text); }
+#cpHeader {
+  padding: 16px; border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg,#222832,#1a1f26);
+}
+.cp-segment { font-size: 12px; color: var(--accent); font-weight: bold; }
+.cp-count { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+.cp-year {
+  font-size: 10px; padding: 1px 8px; border-radius: 10px;
+  background: rgba(195,150,120,.15); color: #d8a884;
+  font-family: monospace; white-space: nowrap; flex-shrink: 0;
+}
+.cp-item.active .cp-year { background: rgba(224,179,106,.25); color: var(--accent); }
+#cpBody { flex: 1; overflow-y: auto; padding: 8px 0; }
+#cpBody::-webkit-scrollbar { width: 6px; }
+#cpBody::-webkit-scrollbar-thumb { background: #333c48; border-radius: 3px; }
+.cp-item {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 7px 14px; cursor: pointer; font-size: 12px;
+  color: var(--text-dim); border-left: 3px solid transparent;
+  transition: all .15s;
+}
+.cp-item:hover { background: var(--panel2); color: var(--text); }
+.cp-item.active {
+  background: var(--panel2); color: var(--accent);
+  border-left-color: var(--accent); font-weight: bold;
+}
+.cp-item .cp-order { font-size: 10px; color: var(--text-dim); font-family: monospace; flex-shrink: 0; }
+.cp-item.active .cp-order { color: var(--accent); }
+.cp-item .cp-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.cp-item .cp-loc { font-size: 10px; color: var(--text-dim); flex-shrink: 0; }
+
+#spHeader {
+  padding: 16px; border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg,#222832,#1a1f26);
+}
+.sp-segment { font-size: 10px; color: var(--accent2); display: inline-block; padding: 2px 10px; border-radius: 10px; background: rgba(122,162,217,.15); }
+.sp-year {
+  font-size: 10px; color: #d8a884; display: inline-block; padding: 2px 10px;
+  border-radius: 10px; background: rgba(195,150,120,.18);
+  font-family: monospace; margin-left: 6px;
+}
+.sp-title { font-size: 17px; color: var(--text); font-weight: bold; margin-top: 6px; }
+.sp-loc { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+.sp-summary {
+  margin-top: 10px; font-size: 12px; color: var(--text); line-height: 1.8;
+  padding: 10px 12px; background: var(--panel2); border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+}
+.sp-chars { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+.sp-char-chip {
+  font-size: 11px; padding: 2px 10px; background: var(--panel2);
+  border: 1px solid var(--border); border-radius: 12px; color: var(--text-dim);
+  cursor: pointer;
+}
+.sp-char-chip:hover { border-color: var(--accent); color: var(--accent); }
+#spBody { flex: 1; overflow-y: auto; padding: 12px 16px; }
+#spBody::-webkit-scrollbar { width: 6px; }
+#spBody::-webkit-scrollbar-thumb { background: #333c48; border-radius: 3px; }
+.sp-dlg { margin-bottom: 12px; }
+.sp-dlg-speaker { font-size: 11px; color: var(--accent2); font-weight: bold; margin-bottom: 2px; }
+.sp-dlg-speaker.narr { color: #5c6670; font-style: italic; font-weight: normal; }
+.sp-dlg-text { font-size: 12px; color: var(--text); line-height: 1.8; padding-left: 12px; border-left: 2px solid var(--border); }
+.sp-dlg-narr { font-size: 12px; color: var(--text-dim); font-style: italic; line-height: 1.8; padding-left: 12px; border-left: 2px solid #3a4450; }
+
+/* 悬停梗概 tooltip */
+#tlTooltip {
+  position: fixed; z-index: 100; max-width: 340px;
+  background: rgba(20,24,30,.97); border: 1px solid var(--accent);
+  border-radius: 8px; padding: 12px 14px; font-size: 12px;
+  pointer-events: none; display: none;
+  box-shadow: 0 6px 20px rgba(0,0,0,.6);
+}
+.tt-title { font-size: 14px; color: var(--accent); font-weight: bold; margin-bottom: 4px; }
+.tt-year { font-size: 11px; color: #d8a884; font-family: monospace; margin-bottom: 4px; }
+.tt-sum { color: var(--text); line-height: 1.7; margin-bottom: 6px; }
+.tt-chars-label { color: var(--text-dim); font-size: 11px; margin-bottom: 4px; }
+.tt-chars { display: flex; flex-wrap: wrap; gap: 4px; }
+.tt-char {
+  font-size: 10px; padding: 2px 8px; background: var(--panel2);
+  border: 1px solid var(--border); border-radius: 10px; color: var(--text-dim);
+}
+
+@media (max-width: 768px) {
+  #sidebar, #tlSidebar { width: 220px; }
+  #tlMain { padding: 16px; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <h1>明日方舟 · 人物关系图谱</h1>
+    <span class="subtitle">剧情对话共现 + 交互关系 · PRTS Wiki 数据</span>
+    <div class="nav-tabs">
+      <button class="nav-tab active" id="tabGraph">图谱</button>
+      <button class="nav-tab" id="tabTimeline">时间线</button>
+    </div>
+  </div>
+
+  <div id="body">
+    <!-- ====== 图谱视图 ====== -->
+    <div id="graphView">
+      <div id="sidebar">
+        <div class="ctrl-group">
+          <h3>搜索角色</h3>
+          <input type="text" id="searchBox" placeholder="输入角色名 / 真名 / 代号..." autocomplete="off">
+        </div>
+        <div class="ctrl-group">
+          <h3>视图模式</h3>
+          <div class="view-toggle">
+            <button class="view-btn active" id="viewCore">核心视图</button>
+            <button class="view-btn" id="viewAll">全量视图</button>
+          </div>
+        </div>
+        <div class="ctrl-group">
+          <h3>阵营筛选</h3>
+          <div class="filter-row">
+            <div class="filter-label">阵营（多选，点击切换）</div>
+            <div class="filter-chips" id="factionChips"></div>
+          </div>
+          <div class="filter-row">
+            <div class="filter-label">角色类型</div>
+            <div class="filter-chips" id="typeChips">
+              <span class="chip active" data-type="all">全部</span>
+              <span class="chip" data-type="op">干员</span>
+              <span class="chip" data-type="npc">NPC</span>
+            </div>
+          </div>
+        </div>
+        <div class="ctrl-group">
+          <h3>关系强度阈值</h3>
+          <input type="range" id="strengthRange" min="0" max="100" value="5">
+          <div class="range-val">仅显示强度 ≥ <span id="strengthVal">5</span></div>
+        </div>
+        <div class="stat-box">
+          <h3 style="font-size:12px;color:#8a96a3;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">图谱统计</h3>
+          <div class="stat-grid">
+            <div class="stat-item"><div class="num" id="statNodes">0</div><div class="lbl">节点</div></div>
+            <div class="stat-item"><div class="num" id="statLinks">0</div><div class="lbl">关系</div></div>
+            <div class="stat-item"><div class="num" id="statOps">0</div><div class="lbl">干员</div></div>
+            <div class="stat-item"><div class="num" id="statFactions">0</div><div class="lbl">阵营</div></div>
+          </div>
+        </div>
+        <div class="legend-box">
+          <h3 style="font-size:12px;color:#8a96a3;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">图例</h3>
+          <div class="legend-item"><div class="legend-dot" style="background:#7aa2d9;"></div>干员（可操作角色）</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#e0b36a;"></div>NPC / BOSS</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#be5046;"></div>前文明</div>
+          <div class="legend-item"><div class="legend-line"></div>关系强度（粗=强）</div>
+        </div>
+        <div class="help-box">
+          <b>操作指南</b><br>
+          · 拖拽空白处平移，滚轮缩放<br>
+          · 点击节点查看详情与关联<br>
+          · 双击节点聚焦并高亮关系<br>
+          · 搜索框输入真名/代号均可定位<br>
+          · 详情卡「查看剧情轨迹」进入时间线<br>
+          · 异格干员为独立节点，详情卡标注本体
+        </div>
+      </div>
+
+      <div id="main">
+        <div id="chart"></div>
+        <!-- 左上角人物悬浮小卡（点选模式） -->
+        <div id="nodeFloatCard">
+          <button class="nfc-close" onclick="exitSelectMode()">✕</button>
+          <div class="nfc-head">
+            <span class="nfc-avatar" id="nfcAvatar"></span>
+            <div class="nfc-name" id="nfcName"></div>
+          </div>
+          <div class="nfc-faction" id="nfcFaction"></div>
+          <div class="nfc-profile" id="nfcProfile"></div>
+          <div class="nfc-sec">关键关系</div>
+          <div class="nfc-rels" id="nfcRels"></div>
+          <div class="nfc-hint">按 ESC 关闭并退出点选</div>
+        </div>
+        <div id="detailCard">
+          <button class="dc-close" onclick="closeDetail()">✕</button>
+          <div class="dc-avatar" id="dcAvatar"></div>
+          <div class="dc-name" id="dcName"></div>
+          <div id="dcType" class="dc-type"></div>
+          <div class="dc-faction" id="dcFaction"></div>
+          <div class="dc-stat" id="dcStat"></div>
+          <div class="dc-sec">阵营信息</div>
+          <div id="dcTags" style="font-size:12px;color:#8a96a3;line-height:1.6;"></div>
+          <div class="dc-sec">异格形态</div>
+          <div class="dc-alters" id="dcAlters"></div>
+          <div class="dc-sec">核心关联</div>
+          <div class="dc-rel" id="dcRels"></div>
+          <button class="dc-timeline-btn" id="dcGoTimeline">查看剧情轨迹 →</button>
+        </div>
+        <!-- 关系浮窗（点击关系连线弹出） -->
+        <div id="relFloat"></div>
+        <!-- 关系详情面板（右侧侧边栏） -->
+        <div id="relDetailPanel">
+          <button class="rdp-close" onclick="closeRelDetail()">✕</button>
+          <div id="rdpToc"></div>
+          <div id="rdpBody"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== 时间线视图 ====== -->
+    <div id="tlView">
+      <div id="tlSidebar">
+        <div class="ctrl-group">
+          <h3>选择角色</h3>
+          <input type="text" id="tlSearch" placeholder="搜索角色..." autocomplete="off">
+        </div>
+        <div class="tl-char-list" id="tlCharList"></div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
+        <div class="tl-filterbar">
+          <div class="tl-mode-switch">
+            <button id="tlModeSingle" class="tl-mode-btn active" onclick="setTlMode(false)">单列</button>
+            <button id="tlModeTree" class="tl-mode-btn" onclick="setTlMode(true)">树状</button>
+          </div>
+          <span class="tl-filter-label">段落筛选：</span>
+          <select id="tlSegmentFilter">
+            <option value="">全部段落</option>
+          </select>
+          <span class="tl-filter-label">地点：</span>
+          <input type="text" id="tlLocFilter" placeholder="筛选地点..." style="width:140px;">
+          <span class="tl-filter-label" style="margin-left:8px;color:#5c6670;">点击一幕查看全幕对话 · 悬停看梗概</span>
+        </div>
+        <div id="tlMain">
+          <div class="tl-empty">正在加载时间线数据...</div>
+        </div>
+      </div>
+      <!-- 章节目录侧栏（剧情回溯） -->
+      <div id="tlChapterPanel">
+        <button class="sp-close" onclick="closeChapterPanel()">✕</button>
+        <div id="cpHeader"></div>
+        <div id="cpBody"></div>
+      </div>
+      <!-- 全幕对话侧栏 -->
+      <div id="tlScenePanel">
+        <button class="sp-close" onclick="closeScenePanel()">✕</button>
+        <div id="spHeader"></div>
+        <div id="spBody"></div>
+      </div>
+      <!-- 悬停梗概 tooltip -->
+      <div id="tlTooltip"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ====== 全局状态 ======
+let GRAPH = null;
+let TIMELINE = null;
+let chart = null;
+let currentView = 'core';
+let selectedFactions = new Set();
+let currentType = 'all';
+let strengthPct = 5;    // 默认强度阈值：隐藏弱边，防卡顿
+let currentNode = null;
+let focusedNode = null;
+let tlCurrentChar = null;
+let tlTreeMode = false;    // false=单列卡片流 true=树状双列（主线/其他）
+let chapterScenes = [];   // 当前章节目录的幕列表
+let chapterCurrentKey = null;
+let segmentIndex = null;  // segment -> [{key,order,title,segment,location,summary,characters}]
+
+// 阵营配色
+const FACTION_COLORS = {
+  '罗德岛': '#7aa2d9', '龙门': '#e06c75', '炎': '#e06c75', '炎-龙门': '#e06c75',
+  '整合运动': '#c678dd', '卡兹戴尔': '#7c5cff', '萨卡兹王庭': '#7c5cff',
+  '乌萨斯': '#e5c07b', '谢拉格': '#98c379', '叙拉古': '#d19a66',
+  '维多利亚': '#56b6c2', '巴别塔': '#7c5cff', '塔拉': '#d19a66',
+  '拉特兰': '#f0c674', '莱塔尼亚': '#8f7cd9', '哥伦比亚': '#a3a3ff',
+  '阿戈尔': '#61afef', '深海猎人': '#2e9e8f', '伊比利亚': '#4a90c2',
+  '卡西米尔': '#e4c07b', '萨尔贡': '#b8c07b', '前文明': '#be5046',
+  // 罗德岛合作组织（按 PRTS 所属势力中的具体组织归类，而非笼统归入罗德岛）
+  '企鹅物流': '#e8a13a', '鲤氏侦探事务所': '#3fb6a8', '格拉斯哥帮': '#c97b4a',
+  '喀兰贸易': '#9b8cff', '莱茵生命': '#5fb87a', '龙门近卫局': '#e06c75',
+  '黑钢国际': '#7d8794', '深池': '#2f7d6e', '炎国岁相': '#c0392b',
+  '炎国': '#b5482f', '独立干员': '#8a7ca8',
+  '未知': '#5c6670'
+};
+function factionColor(f) {
+  if (FACTION_COLORS[f]) return FACTION_COLORS[f];
+  for (const k of Object.keys(FACTION_COLORS)) {
+    if (f && f.includes(k)) return FACTION_COLORS[k];
+  }
+  return '#5c6670';
+}
+// 颜色加深/变浅（pct 负数=加深，正数=变浅）
+function shadeColor(hex, pct) {
+  const num = parseInt(hex.slice(1), 16);
+  let r = (num >> 16) + pct, g = ((num >> 8) & 0xff) + pct, b = (num & 0xff) + pct;
+  r = Math.max(0, Math.min(255, r));
+  g = Math.max(0, Math.min(255, g));
+  b = Math.max(0, Math.min(255, b));
+  return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
+
+// ====== 数据加载 ======
+let SCENES = null; // scene_dialogues.json
+let SCENE_SEG_INDEX = {};  // segment -> [{key,title,order}] 按 order 排序（章节剧情目录）
+let AVATARS = {};  // 角色头像映射 {name: url}
+let RELS = null;   // relation_details.json（点击连线的两人关系详情）
+let FACTION_LOGOS = {};  // 阵营图标映射 {faction: logoUrl}
+// 按章节(segment)建立剧情索引，供详情面板左侧章节目录使用
+function buildSceneSegmentIndex() {
+  SCENE_SEG_INDEX = {};
+  const scs = (SCENES && SCENES.scenes) || {};
+  Object.keys(scs).forEach(k => {
+    const seg = scs[k].segment || '未分段';
+    (SCENE_SEG_INDEX[seg] = SCENE_SEG_INDEX[seg] || []).push({ key: k, title: scs[k].title || k, order: scs[k].order || 0 });
+  });
+  Object.values(SCENE_SEG_INDEX).forEach(arr => arr.sort((a, b) => a.order - b.order));
+}
+// 头像 HTML：有图用图，无图用阵营色占位首字
+function avatarHtml(name, faction, cls) {
+  const av = AVATARS[name];
+  const first = (name || '?').trim()[0] || '?';
+  return av
+    ? `<img class="${cls}" src="${av}" alt="" loading="lazy" referrerpolicy="no-referrer">`
+    : `<span class="${cls} placeholder" style="background:${factionColor(faction)}">${first}</span>`;
+}
+async function loadAll() {
+  try {
+    const [gRes, tRes, sRes, aRes, rRes, lRes] = await Promise.all([
+      fetch('graph.json'), fetch('timeline.json'), fetch('scene_dialogues.json'), fetch('avatars.json'), fetch('relation_details.json'), fetch('faction_logos.json')
+    ]);
+    GRAPH = await gRes.json();
+    TIMELINE = await tRes.json();
+    SCENES = await sRes.json();
+    buildSceneSegmentIndex();
+    const aData = await aRes.json();
+    AVATARS = (aData && aData.avatar) || {};
+    RELS = await rRes.json();
+    const lData = await lRes.json();
+    FACTION_LOGOS = (lData && lData.logos) || {};
+    // 头像/图标已本地化到 avatars/，加载时转为 dataURL 交给 ECharts（内联绘制，稳定显示）
+    await preloadImagesAsDataURL();
+    buildSegmentIndex();
+    initGraphUI();
+    initTimelineUI();
+    renderGraph();
+  } catch (e) {
+    console.error('加载失败:', e);
+    document.getElementById('chart').innerHTML =
+      '<p style="color:#e06c75;padding:20px;">加载数据失败：' + e.message + '<br>请确认 graph.json / timeline.json / scene_dialogues.json / avatars.json / relation_details.json 与 index.html 在同一目录</p>';
+  }
+}
+
+// 本地头像/图标 → dataURL：从本地 avatars/ 目录读图，缩到 ≤MAXPX 后 toDataURL 写回。
+// ECharts 用 dataURL 内联绘制，稳定渲染（本地同源文件转 canvas 无 CORS 污染，不依赖 ECharts 异步图片时序）。
+function preloadImagesAsDataURL() {
+  const MAXPX = 80;
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const jobs = [];
+  GRAPH.nodes.forEach(n => { if (!n.hide && AVATARS[n.name]) jobs.push({ set: d => AVATARS[n.name] = d, u: AVATARS[n.name] }); });
+  Object.keys(FACTION_LOGOS).forEach(f => { const u = FACTION_LOGOS[f]; if (u) jobs.push({ set: d => FACTION_LOGOS[f] = d, u }); });
+  return Promise.all(jobs.map(j => new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const w = Math.min(img.naturalWidth || MAXPX, MAXPX);
+        const h = Math.min(img.naturalHeight || MAXPX, MAXPX);
+        canvas.width = w; canvas.height = h;
+        ctx.clearRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        j.set(canvas.toDataURL('image/png'));
+      } catch (e) { /* 保留原路径兜底 */ }
+      resolve();
+    };
+    img.onerror = () => resolve();
+    img.src = j.u;
+  })));
+}
+
+function initGraphUI() {
+  const factions = new Set();
+  GRAPH.nodes.forEach(n => factions.add(n.faction || '未知'));
+  const sortedFactions = [...factions].sort((a,b) => {
+    const ca = GRAPH.nodes.filter(n => n.faction === a).length;
+    const cb = GRAPH.nodes.filter(n => n.faction === b).length;
+    return cb - ca;
+  });
+  const chipBox = document.getElementById('factionChips');
+  sortedFactions.forEach(f => {
+    const chip = document.createElement('span');
+    chip.className = 'chip active';
+    chip.textContent = f;
+    chip.dataset.faction = f;
+    chip.onclick = () => {
+      chip.classList.toggle('off');
+      if (selectedFactions.has(f)) selectedFactions.delete(f);
+      else selectedFactions.add(f);
+      renderGraph();
+    };
+    chipBox.appendChild(chip);
+  });
+
+  document.querySelectorAll('#typeChips .chip').forEach(c => {
+    c.onclick = () => {
+      document.querySelectorAll('#typeChips .chip').forEach(x => x.classList.remove('active'));
+      c.classList.add('active');
+      currentType = c.dataset.type;
+      renderGraph();
+    };
+  });
+
+  document.getElementById('strengthRange').addEventListener('input', (e) => {
+    strengthPct = parseInt(e.target.value);
+    document.getElementById('strengthVal').textContent = strengthPct + '%';
+    renderGraph();
+  });
+
+  document.getElementById('viewCore').onclick = () => {
+    currentView = 'core';
+    document.getElementById('viewCore').classList.add('active');
+    document.getElementById('viewAll').classList.remove('active');
+    renderGraph();
+  };
+  document.getElementById('viewAll').onclick = () => {
+    currentView = 'all';
+    document.getElementById('viewAll').classList.add('active');
+    document.getElementById('viewCore').classList.remove('active');
+    renderGraph();
+  };
+
+  document.getElementById('searchBox').addEventListener('input', (e) => {
+    const q = e.target.value.trim();
+    if (!q) { focusedNode = null; renderGraph(); return; }
+    const hit = GRAPH.nodes.find(n => n.name === q) ||
+                GRAPH.nodes.find(n => n.name.includes(q));
+    if (hit) {
+      focusedNode = hit.name;
+      renderGraph();
+      if (chart) {
+        chart.dispatchAction({ type: 'focusNodeAdjacency', seriesIndex: 0, dataIndex: hit._idx });
+      }
+    } else { focusedNode = null; renderGraph(); }
+  });
+
+  document.getElementById('dcGoTimeline').onclick = () => {
+    if (currentNode) showTimeline(currentNode);
+    else if (focusedNode) showTimeline(focusedNode);
+  };
+
+  // 导航
+  document.getElementById('tabGraph').onclick = () => switchView('graph');
+  document.getElementById('tabTimeline').onclick = () => {
+    if (currentNode) showTimeline(currentNode);
+    else if (GRAPH) showTimeline(GRAPH.nodes[0].name);
+  };
+}
+
+// ====== 图谱渲染 ======
+function filterNodes() {
+  if (!GRAPH) return { nodes: [], links: [] };
+  // 隐藏集合：无法操控的干员 / 非剧情关键角色（graph.json 中 hide:true）
+  const hiddenSet = new Set(GRAPH.nodes.filter(n => n.hide).map(n => n.name));
+  let nodeSet;
+  if (currentView === 'core') nodeSet = new Set(GRAPH.core_nodes || []);
+  else nodeSet = new Set(GRAPH.nodes.filter(n => !n.is_extra).map(n => n.name)); // 全量视图隐藏群演/无名/无独立人格
+  // 两种视图都排除 hide 节点
+  nodeSet = new Set([...nodeSet].filter(name => !hiddenSet.has(name)));
+
+  if (selectedFactions.size > 0) {
+    nodeSet = new Set([...nodeSet].filter(name => {
+      const n = GRAPH.nodes.find(x => x.name === name);
+      return n && selectedFactions.has(n.faction);
+    }));
+  }
+  if (currentType === 'op') {
+    nodeSet = new Set([...nodeSet].filter(name => GRAPH.nodes.find(x => x.name === name)?.operator));
+  } else if (currentType === 'npc') {
+    nodeSet = new Set([...nodeSet].filter(name => !GRAPH.nodes.find(x => x.name === name)?.operator));
+  }
+  const maxStrength = Math.max(...GRAPH.links.map(l => l.strength), 1);
+  const threshold = maxStrength * strengthPct / 100;
+  // 具体关系（手工标注）不受阈值过滤
+  const isConcreteRel = (l) => {
+    const r = l.relation || '';
+    return r && r !== '剧情交集' && r !== '跨阵营' && r !== '同阵营';
+  };
+  // 重要角色集合：重要角色之间的边始终显示
+  const importantSet = new Set(GRAPH.nodes.filter(n => n.important).map(n => n.name));
+  let links = GRAPH.links.filter(l => {
+    const importantLink = importantSet.has(l.source) && importantSet.has(l.target);
+    if (!isConcreteRel(l) && !importantLink && l.strength < threshold) return false;
+    return nodeSet.has(l.source) && nodeSet.has(l.target);
+  });
+  // 边数硬上限（防卡顿）：核心视图 2500 / 全量视图 1400，超限按强度截断
+  const MAX_LINKS = currentView === 'core' ? 2500 : 1400;
+  if (links.length > MAX_LINKS) {
+    links = [...links].sort((a, b) => b.strength - a.strength).slice(0, MAX_LINKS);
+  }
+  const linked = new Set();
+  links.forEach(l => { linked.add(l.source); linked.add(l.target); });
+  const nodes = GRAPH.nodes.filter(n => nodeSet.has(n.name) && linked.has(n.name));
+  nodes.forEach((n, i) => n._idx = i);
+  return { nodes, links };
+}
+
+function renderGraph() {
+  const { nodes, links } = filterNodes();
+  if (!chart) {
+    chart = echarts.init(document.getElementById('chart'));
+    chart.on('click', onChartClick);
+    chart.on('dblclick', onChartClick);
+    window.addEventListener('resize', () => chart && chart.resize());
+    // 气泡：拖动角色时把它标记为固定（挤开邻居），结束后落定为新基准位置
+    const dragNameOf = p => p.name || (p.data && p.data.name) || null;
+    chart.on('dragstart', p => {
+      const nm = dragNameOf(p);
+      const b = _bubChar.get(nm);
+      if (b) { b.fixed = true; _dragName = nm; }
+    });
+    chart.on('dragging', p => {
+      const b = _bubChar.get(dragNameOf(p));
+      if (b) { b.x = b.el && b.el.x != null ? b.el.x : b.baseX; b.y = b.el && b.el.y != null ? b.el.y : b.baseY; }
+    });
+    chart.on('dragend', p => {
+      const b = _bubChar.get(dragNameOf(p));
+      if (b) { b.baseX = b.el && b.el.x != null ? b.el.x : b.baseX; b.baseY = b.el && b.el.y != null ? b.el.y : b.baseY; b.fixed = false; }
+      _dragName = null;
+    });
+  }
+  const focusName = currentNode || focusedNode;
+
+  // 点选模式的直接邻居集合
+  const focusNeighbors = new Set();
+  if (focusName) {
+    links.forEach(l => {
+      if (l.source === focusName) focusNeighbors.add(l.target);
+      if (l.target === focusName) focusNeighbors.add(l.source);
+    });
+  }
+
+  // ====== 阵营簇（行星团）布局：circle packing 团间严格不重叠 + 自适应缩放铺满画布 ======
+  const cnt = {};
+  nodes.forEach(n => { const ff = n.faction || '未知'; cnt[ff] = (cnt[ff] || 0) + 1; });
+  const factions = [...new Set(nodes.map(n => n.faction || '未知'))];
+  const known = factions.filter(ff => ff !== '未知').sort((a, b) => cnt[b] - cnt[a]);
+
+  const W = chart.getWidth() || 1200;
+  const H = chart.getHeight() || 800;
+  const CX = W / 2, CY = H / 2;
+  const M = Math.min(W, H);
+
+  // 团半径：容纳团内螺旋最远节点 + 边距（IN_BASE/IN_STEP 与团内螺旋一致，MARGIN 保证头像不出圈）
+  const IN_BASE = 36, IN_STEP = 28, RING_MARGIN = 60;
+  const fracR = {};
+  known.forEach(f => {
+    const n = cnt[f] || 1;
+    const maxRad = IN_BASE + Math.sqrt(Math.max(n - 1, 0)) * IN_STEP;
+    fracR[f] = maxRad + RING_MARGIN;
+  });
+
+  // circle packing：最大团（罗德岛）置于正中心，其余按螺旋向外，团间间距≥14 保证边界圈/图标不重叠。
+  // 放置顺序：阵营间亲密度用"排除中心枢纽的边"计算，再按最近邻链排序，使相关联阵营在螺旋中相邻。
+  const nf = {};
+  nodes.forEach(n => { nf[n.name] = n.faction || '未知'; });
+  const centerF = known[0];   // 最大团（通常是罗德岛）居中
+  const affKey = (a, b) => (a < b ? a + '|' + b : b + '|' + a);
+  const faff = {};
+  links.forEach(l => {
+    const fa = nf[l.source], fb = nf[l.target];
+    if (!fa || !fb || fa === fb || fa === '未知' || fb === '未知') return;
+    if (fa === centerF || fb === centerF) return;   // 排除中心枢纽，凸显其他阵营间的真实关联
+    faff[affKey(fa, fb)] = (faff[affKey(fa, fb)] || 0) + 1;
+  });
+  const aff = (a, b) => faff[affKey(a, b)] || 0;
+  const ordered = [centerF];
+  const rest = known.slice(1);
+  while (rest.length) {
+    const last = ordered[ordered.length - 1];
+    let bi = 0, bs1 = -1, bs2 = -1, bs3 = -1;
+    for (let i = 0; i < rest.length; i++) {
+      const s1 = aff(rest[i], last);                     // 主：与刚放置阵营的亲密度
+      let s2 = 0; for (const g of ordered) s2 += aff(rest[i], g);  // 次：与已放置集合总和
+      const s3 = cnt[rest[i]] || 0;                      // 兜底：按规模
+      if (s1 > bs1 || (s1 === bs1 && s2 > bs2) || (s1 === bs1 && s2 === bs2 && s3 > bs3)) {
+        bs1 = s1; bs2 = s2; bs3 = s3; bi = i;
+      }
+    }
+    ordered.push(rest[bi]);
+    rest.splice(bi, 1);
+  }
+  const pack = {};   // 打包空间坐标（未缩放）
+  const placed = [];
+  ordered.forEach((f, i) => {
+    const r = fracR[f];
+    let bx = 0, by = 0, found = false;
+    if (i === 0) { found = true; }   // 最大团放正中心
+    else {
+      for (let a = 1; a < 8000 && !found; a++) {
+        const ang = a * 0.5;
+        const rad = Math.sqrt(a) * 14;
+        const x = rad * Math.cos(ang), y = rad * Math.sin(ang);
+        let ok = true;
+        for (const p of placed) {
+          if (Math.hypot(x - p.x, y - p.y) < r + p.r + 8) { ok = false; break; }
+        }
+        if (ok) { bx = x; by = y; found = true; }
+      }
+      if (!found) { bx = 0; by = 0; }   // 极端兜底（极少触发）
+    }
+    pack[f] = { x: bx, y: by };
+    placed.push({ x: bx, y: by, r });
+  });
+
+  // 自适应缩放：把打包后的整团等比缩放并居中到画布，避免团被裁出视口
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  placed.forEach(p => {
+    minX = Math.min(minX, p.x - p.r); maxX = Math.max(maxX, p.x + p.r);
+    minY = Math.min(minY, p.y - p.r); maxY = Math.max(maxY, p.y + p.r);
+  });
+  const bw = Math.max(maxX - minX, 1), bh = Math.max(maxY - minY, 1);
+  const SCALE = Math.min(W / bw, H / bh) * 0.94;
+  const bcx = (minX + maxX) / 2, bcy = (minY + maxY) / 2;
+  const centers = {};
+  known.forEach(f => {
+    const p = pack[f];
+    centers[f] = { x: (p.x - bcx) * SCALE + CX, y: (p.y - bcy) * SCALE + CY };
+  });
+  // 缩放后的团半径（用于边界圈直径与团内螺旋步长，保持等比）
+  const sFracR = {};
+  known.forEach(f => { sFracR[f] = fracR[f] * SCALE; });
+  const inStep = IN_STEP * SCALE, inBase = IN_BASE * SCALE;
+  const inFaction = {};
+
+  const series = {
+    type: 'graph',
+    layout: 'none',
+    roam: true,
+    draggable: true,
+    animation: true,
+    animationDuration: 500,
+    animationDurationUpdate: 250,
+    animationEasingUpdate: 'cubicOut',
+    label: { show: true, position: 'right', fontSize: 10, color: '#b8c2cc', formatter: p => p.data.name, overflow: 'truncate' },
+    lineStyle: {
+      width: params => {
+        const maxS = Math.max(...links.map(l => l.strength), 1);
+        return Math.max(1, Math.min(6, params.data.strength / maxS * 6));
+      },
+      color: '#3a4450',
+      opacity: 0.25,
+      curveness: 0.08
+    },
+    // Obsidian 风格 hover：初始状态聚焦邻居；点选模式下关闭 focus（避免 hover 邻居时把二级边全部强调出来形成网状）
+    emphasis: {
+      focus: focusName ? 'none' : 'adjacency',
+      scale: 1.3,
+      itemStyle: { shadowBlur: 18, shadowColor: 'rgba(224,179,106,.55)' },
+      lineStyle: { opacity: 0.8 },
+      label: { fontSize: 13, color: '#fff', fontWeight: 'bold' }
+    },
+    blur: {
+      itemStyle: { opacity: 0.08 },
+      lineStyle: { opacity: 0 },
+      label: { opacity: 0.3 }
+    },
+    data: (() => {
+      const data = [];
+      // ====== 阵营标识：边界圈（阵营色虚线）+ 图标（居中）+ 阵营名（金色，绑定图标） ======
+      known.forEach(f => {
+        const c = centers[f] || { x: CX, y: CY };
+        const dia = Math.max(28, (sFracR[f] || 60) * 2);
+        const fc = factionColor(f);
+        const logo = FACTION_LOGOS[f];
+        // 无 logo 阵营：名称放圈内居中偏下；字号按圈径自适应，保证名称不超出圈宽
+        const nameFont = logo ? 11 : Math.max(8, Math.min(11, Math.floor((dia - 14) / Math.max(f.length, 1))));
+        data.push({
+          id: '__ring_' + f, name: logo ? '' : f, z: 1, draggable: false,
+          x: c.x, y: c.y,
+          symbol: 'circle', symbolSize: dia,
+          itemStyle: { color: 'rgba(26,31,38,.2)', borderColor: fc, borderWidth: 1.5, borderType: 'dashed', opacity: 0.5 },
+          label: logo ? { show: false } : { show: true, position: 'insideBottom', distance: 6, fontSize: nameFont, lineHeight: 14, color: '#e0b36a', fontWeight: 'bold' },
+          silent: true,
+          emphasis: { disabled: true },
+          blur: { itemStyle: { opacity: 0.5 }, label: { opacity: 1 } },
+          _ring: true
+        });
+        if (logo) {
+          // 阵营名直接绑定到图标节点：label 跟随图标，图标 silent 不可移动
+          data.push({
+            id: '__logo_' + f, name: f, z: 1, draggable: false,
+            x: c.x, y: c.y,
+            symbol: 'image://' + logo, symbolSize: 42,
+            itemStyle: { opacity: 0.95 },
+            label: { show: true, position: 'bottom', distance: 6, fontSize: 11, color: '#e0b36a', fontWeight: 'bold' },
+            silent: true,
+            emphasis: { disabled: true },
+            blur: { itemStyle: { opacity: 0.95 }, label: { opacity: 1 } },
+            _ring: true
+          });
+        }
+      });
+      // ====== 角色节点 ======
+      nodes.forEach(n => {
+        const f = n.faction || '未知';
+        const fc = factionColor(f);
+        const k = (inFaction[f] = (inFaction[f] || 0) + 1) - 1;
+        const ang = k * 2.399;   // 黄金角螺旋，团内紧凑不重叠
+        const av = AVATARS[n.name] || null;
+        const symSize = av ? Math.max(calcSize(n), 16) : calcSize(n);
+        let px, py;
+        if (f === '未知') {
+          const rad = M * 0.43 + (k % 6) * 7;
+          px = CX + rad * Math.cos(ang);
+          py = CY + rad * Math.sin(ang);
+        } else {
+          const cl = centers[f] || { x: CX, y: CY };
+          // 起始半径 30 避开中心阵营图标，步长 18 保证头像之间不重叠（黄金角螺旋均匀分布）
+          const rad = inBase + Math.sqrt(k) * inStep;
+          px = cl.x + rad * Math.cos(ang);
+          py = cl.y + rad * Math.sin(ang);
+          // 圈内约束：头像边缘不超出阵营圈（预留 8px 余量），杜绝靠边越圈
+          const maxR = (sFracR[f] || 60) - symSize / 2 - 8;
+          const dx = px - cl.x, dy = py - cl.y;
+          const d = Math.hypot(dx, dy);
+          if (d > maxR && d > 0.001) { px = cl.x + dx / d * maxR; py = cl.y + dy / d * maxR; }
+        }
+        const focused = focusName && n.name === focusName;
+        const isNeighbor = focusName && focusNeighbors.has(n.name);
+        // 点选模式：选中最亮 → 直接邻居次亮 → 无关节点淡出
+        let opacity = n.operator ? 0.9 : 0.85;
+        if (focusName) opacity = focused ? 1 : (isNeighbor ? 0.92 : 0.1);
+        // 核心视图与全量视图都用头像图片补全人物图标（无头像则回退色块）
+        data.push({
+          id: n.name, name: n.name, z: 10,
+          x: px, y: py,
+          symbol: av ? 'image://' + av : 'circle',
+          symbolSize: symSize,
+          itemStyle: {
+            color: factionColor(n.faction),
+            opacity: opacity,
+            borderColor: av ? 'rgba(255,255,255,.35)' : shadeColor(factionColor(n.faction), -25),
+            borderWidth: av ? 1 : 1.5
+          },
+          // hover 发光色跟随阵营；选中节点在 hover 其他节点时保持不淡化
+          emphasis: { itemStyle: { shadowColor: fc + 'aa' } },
+          blur: focused ? { itemStyle: { opacity: 1 }, label: { opacity: 1 } } : null,
+          label: {
+            show: true, position: 'right', fontSize: focused ? 13 : 10,
+            color: focused ? '#fff' : (isNeighbor ? '#b8c2cc' : '#5c6670'),
+            fontWeight: focused ? 'bold' : 'normal'
+          },
+          category: n.operator ? 'operator' : 'npc',
+          value: n.score,
+          _n: n
+        });
+      });
+      return data;
+    })(),
+    links: links.map(l => {
+      const rel = l.relation || '关联';
+      const linkData = {
+        source: l.source, target: l.target, strength: l.strength, value: l.strength, _l: l,
+        silent: false
+      };
+      if (focusName) {
+        const directA = l.source === focusName;
+        const directB = l.target === focusName;
+        if (directA || directB) {
+          // 选中节点直连边：金色虚线 + 关系标签
+          linkData.lineStyle = { type: 'dashed', color: '#e0b36a', width: 1.6, opacity: 0.85, curveness: 0.08 };
+          const concrete = rel !== '剧情交集' && rel !== '跨阵营' && rel !== '同阵营';
+          if (concrete) {
+            linkData.label = {
+              show: true, formatter: () => rel, position: 'middle', fontSize: 9,
+              color: '#e0b36a', backgroundColor: 'rgba(26,31,38,.88)',
+              padding: [1, 5], borderRadius: 3
+            };
+          }
+        } else {
+          // 其他边（含邻居之间的二级边）：全部隐藏，且不响应 hover（集中展示选中角色的关系）
+          linkData.lineStyle = { opacity: 0 };
+          linkData.silent = true;
+        }
+      }
+      return linkData;
+    })
+  };
+
+  if (focusName) {
+    const sel = series.data.find(d => d.name === focusName);
+    if (sel) {
+      sel.itemStyle = {
+        ...sel.itemStyle,
+        borderColor: '#e0b36a', borderWidth: 3,
+        shadowBlur: 20, shadowColor: 'rgba(224,179,106,.6)'
+      };
+    }
+  }
+
+  chart.setOption({ backgroundColor: 'transparent', tooltip: { show: false }, series: [series] }, true);
+
+  // 点选模式下启动节点光晕呼吸（shadow 绑定节点，随绘制天然跟随）
+  if (currentNode) startGlow(); else stopGlow();
+
+  document.getElementById('statNodes').textContent = nodes.length;
+  document.getElementById('statLinks').textContent = links.length;
+  document.getElementById('statOps').textContent = nodes.filter(n => n.operator).length;
+  document.getElementById('statFactions').textContent = new Set(nodes.map(n => n.faction)).size;
+
+  // 气泡悬浮：重建气泡状态并启动动画（静置时图标微浮、碰撞避让、拖动挤开）
+  rebuildBubbles();
+  startFloat();
+}
+
+// ====== 气泡悬浮动画（静置微浮 + 碰撞避让 + 拖动挤开 + 弹性边界不越界） ======
+let _bubChar = new Map();   // name -> {el, faction, baseX,baseY, x,y, r, px,py, fx,fy, amp, fixed}
+let _bubLogo = {};          // faction -> {el, baseX,baseY, x,y, r, ph}
+let _bubRing = {};          // faction -> {el, baseX,baseY, x,y, r}
+let _floatTimer = null;
+let _floatT = 0;
+let _dragName = null;
+
+function _hashP(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h / 4294967296; }
+function _factionOfRing(id) {
+  const s = String(id || '');
+  return s.indexOf('__ring_') === 0 ? s.slice(7) : (s.indexOf('__logo_') === 0 ? s.slice(7) : '');
+}
+
+// 重建气泡：基准位置取自系列数据（保证存在）；渲染元素从 zrender 渲染树挂载（失败不影响圈约束）
+function rebuildBubbles() {
+  _bubChar.clear(); _bubLogo = {}; _bubRing = {};
+  if (!chart) return;
+  let sm = null, data = null;
+  try { sm = chart.getModel().getSeriesByIndex(0); data = sm && sm.getData(); } catch (e) { return; }
+  if (!data) return;
+  data.each(i => {
+    const raw = data.getRawDataItem(i);
+    if (!raw) return;
+    if (raw._ring) {
+      const f = _factionOfRing(raw.id);
+      if (!f) return;
+      if (raw.symbol === 'circle') _bubRing[f] = { id: raw.id, raw, el: null, baseX: raw.x, baseY: raw.y, x: raw.x, y: raw.y, r: (raw.symbolSize || 60) / 2 };
+      else _bubLogo[f] = { id: raw.id, raw, el: null, baseX: raw.x, baseY: raw.y, x: raw.x, y: raw.y, r: (raw.symbolSize || 42) / 2, ph: _hashP(f) };
+    } else {
+      const nn = raw.name || '';
+      if (!nn) return;
+      const size = raw.symbolSize || 20;
+      _bubChar.set(nn, {
+        id: nn, raw, el: null, faction: (raw._n && raw._n.faction) || '未知',
+        baseX: raw.x, baseY: raw.y, x: raw.x, y: raw.y,
+        r: Math.max(size, 16) / 2 + 3,
+        px: _hashP(nn + '_x') * Math.PI * 2, py: _hashP(nn + '_y') * Math.PI * 2,
+        fx: 0.5 + _hashP(nn + '_f') * 0.6, fy: 0.5 + _hashP(nn + '_g') * 0.6,
+        amp: 2.5 + _hashP(nn + '_a') * 2.5,
+        fixed: false
+      });
+    }
+  });
+  try {
+    const list = chart.getZr().storage.getDisplayList();
+    for (let i = 0; i < list.length; i++) {
+      const el = list[i], ec = el && el.__ecData;
+      if (!ec || ec.dataType !== 'node') continue;
+      const raw = data.getRawDataItem(ec.dataIndex);
+      if (!raw) continue;
+      if (raw._ring) {
+        const f = _factionOfRing(raw.id);
+        if (raw.symbol === 'circle' && _bubRing[f]) _bubRing[f].el = el;
+        else if (_bubLogo[f]) _bubLogo[f].el = el;
+      } else {
+        const b = _bubChar.get(raw.name || '');
+        if (b) b.el = el;
+      }
+    }
+  } catch (e) { /* 元素挂载失败不致命 */ }
+  // 兜底：把越界的角色基准位置拉回圈内（弹性边界，永不越界）
+  for (const b of _bubChar.values()) {
+    const R = _bubRing[b.faction];
+    if (R && R.r > b.r + 8) {
+      const dx = b.baseX - R.baseX, dy = b.baseY - R.baseY;
+      const d = Math.hypot(dx, dy), maxD = R.r - b.r - 8;
+      if (d > maxD && d > 0.001) { b.baseX = R.baseX + dx / d * maxD; b.baseY = R.baseY + dy / d * maxD; }
+    }
+  }
+}
+
+function _resolvePair(a, b, gap) {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const minD = a.r + b.r + gap;
+  const d2 = dx * dx + dy * dy;
+  if (d2 > 0.0001 && d2 < minD * minD) {
+    const d = Math.sqrt(d2), ov = minD - d;
+    const nx = dx / d, ny = dy / d;
+    if (a.fixed) { b.x += nx * ov; b.y += ny * ov; }
+    else if (b.fixed) { a.x -= nx * ov; a.y -= ny * ov; }
+    else { a.x -= nx * ov / 2; a.y -= ny * ov / 2; b.x += nx * ov / 2; b.y += ny * ov / 2; }
+  }
+}
+function _resolveWithLogo(b, L, gap) {
+  const dx = b.x - L.x, dy = b.y - L.y;
+  const minD = b.r + L.r + gap;
+  const d2 = dx * dx + dy * dy;
+  if (d2 > 0.0001 && d2 < minD * minD) {
+    const d = Math.sqrt(d2), ov = minD - d;
+    b.x += dx / d * ov; b.y += dy / d * ov;   // logo 固定，只推角色
+  }
+}
+
+function updateBubbles(t) {
+  // 1) 阵营 logo + 边界圈整体微漂（同一相位，圈中心随之浮动）
+  for (const f in _bubLogo) {
+    const L = _bubLogo[f];
+    const dx = Math.sin(t * 0.9 + L.ph * 7) * 2.5;
+    const dy = Math.cos(t * 0.7 + L.ph * 5) * 2.5;
+    L.x = L.baseX + dx; L.y = L.baseY + dy;
+    const R = _bubRing[f];
+    if (R) { R.x = R.baseX + dx; R.y = R.baseY + dy; }
+  }
+  // 2) 角色：拖动中跟随元素，否则 base + 独立浮动
+  const arr = [];
+  for (const b of _bubChar.values()) {
+    if (b.fixed) { b.x = (b.el && b.el.x != null) ? b.el.x : b.baseX; b.y = (b.el && b.el.y != null) ? b.el.y : b.baseY; }
+    else {
+      b.x = b.baseX + Math.sin(t * b.fx + b.px) * b.amp;
+      b.y = b.baseY + Math.cos(t * b.fy + b.py) * b.amp;
+    }
+    arr.push(b);
+  }
+  // 3) 碰撞避让（同阵营角色间 + 角色与中心图标；拖动节点额外挤开所有人）
+  const GAP = 4;
+  for (let it = 0; it < 2; it++) {
+    for (let i = 0; i < arr.length; i++) {
+      const bi = arr[i];
+      for (let j = i + 1; j < arr.length; j++) {
+        const bj = arr[j];
+        if (bi.faction === bj.faction) _resolvePair(bi, bj, GAP);
+      }
+      const L = _bubLogo[bi.faction];
+      if (L) _resolveWithLogo(bi, L, GAP);
+    }
+    if (_dragName) {
+      const d = _bubChar.get(_dragName);
+      if (d) for (const b of arr) { if (b !== d) _resolvePair(d, b, GAP); }
+    }
+  }
+  // 4) 弹性边界：角色绝不超过阵营圈
+  for (const b of arr) {
+    const R = _bubRing[b.faction];
+    if (R && !b.fixed && R.r > b.r + 8) {
+      const cx = R.x, cy = R.y;
+      const dx = b.x - cx, dy = b.y - cy;
+      const dist = Math.hypot(dx, dy);
+      const maxD = R.r - b.r - 8;
+      if (dist > maxD && dist > 0.001) { b.x = cx + dx / dist * maxD; b.y = cy + dy / dist * maxD; }
+    }
+  }
+  // 5) 数据驱动移动：展开原数据项 + 新坐标（保留 name/样式等字段，按 id 匹配只更新位置，不污染布局基准）
+  const posData = [];
+  for (const b of _bubChar.values()) posData.push({ ...b.raw, x: b.x, y: b.y });
+  for (const f in _bubLogo) { const L = _bubLogo[f]; posData.push({ ...L.raw, x: L.x, y: L.y }); }
+  for (const f in _bubRing) { const R = _bubRing[f]; posData.push({ ...R.raw, x: R.x, y: R.y }); }
+  chart.setOption({ series: [{ data: posData, animationDurationUpdate: 0, animationDuration: 0 }] }, { lazyUpdate: true });
+}
+
+function startFloat() {
+  if (_floatTimer) return;
+  _floatT = 0;
+  let frame = 0;
+  const step = () => {
+    frame++;
+    if (frame % 3 === 0) {   // 约 20fps，数据驱动 setOption 开销适中
+      const gv = document.getElementById('graphView');
+      if (!(gv && gv.style.display === 'none') && chart && _bubChar.size) {
+        _floatT += 0.05;
+        updateBubbles(_floatT);
+      }
+    }
+    _floatTimer = requestAnimationFrame(step);
+  };
+  _floatTimer = requestAnimationFrame(step);
+}
+function stopFloat() {
+  if (_floatTimer) { cancelAnimationFrame(_floatTimer); _floatTimer = null; }
+}
+
+// ====== 选中节点呼吸光晕：直接作为节点 itemStyle.shadow 的一部分 ======
+// shadow 随节点一起绘制，roam 缩放/平移/节点拖拽时天然跟随，零换算零延迟
+let _glowTimer = null;
+let _glowPhase = 0;
+let _glowEl = null;       // 选中节点的 zrender 元素缓存
+let _reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// 从 zrender 渲染树定位选中节点元素（避免 setOption 全量替换 data 的副作用）
+function findGlowElement() {
+  try {
+    const sModel = chart.getModel().getSeriesByIndex(0);
+    const data = sModel && sModel.getGraph && sModel.getGraph().data;
+    if (!data) return null;
+    let idx = -1;
+    data.each(i => { if (idx < 0 && data.getName(i) === currentNode) idx = i; });
+    if (idx < 0) return null;
+    const list = chart.getZr().storage.getDisplayList();
+    for (let i = list.length - 1; i >= 0; i--) {
+      const el = list[i];
+      const ec = el && el.__ecData;
+      if (ec && ec.dataType === 'node' && ec.dataIndex === idx) return el;
+    }
+  } catch (e) { /* ignore */ }
+  return null;
+}
+
+function startGlow() {
+  if (_glowTimer) return;
+  _glowPhase = 0;
+  _glowEl = null;
+  if (_reducedMotion) return;   // 无障碍：禁用呼吸动画，保留静态光晕（renderGraph 已设）
+  _glowTimer = setInterval(() => {
+    if (!currentNode) { stopGlow(); return; }
+    _glowPhase += 0.26;
+    const wave = (Math.sin(_glowPhase) + 1) / 2;       // 0..1
+    // 光晕范围随节点实际尺寸缩放（核心头像 vs 全量色块一致计算）
+    const node = GRAPH.nodes.find(x => x.name === currentNode);
+    let sz = 24;
+    if (node) {
+      const av = currentView === 'core' ? AVATARS[currentNode] : null;
+      sz = av ? Math.max(calcSize(node), 16) : calcSize(node);
+    }
+    const blur = Math.round(sz * (0.9 + wave * 1.5));   // 0.9~2.4 倍节点尺寸，呼吸更明显
+    const alpha = (0.6 + wave * 0.35).toFixed(2);       // 0.6~0.95
+    try {
+      if (!_glowEl) _glowEl = findGlowElement();
+      if (_glowEl) {
+        _glowEl.setStyle({ shadowBlur: blur, shadowColor: 'rgba(224,179,106,' + alpha + ')' });
+        _glowEl.markRedraw();
+      }
+    } catch (e) { /* ignore */ }
+  }, 90);
+}
+function stopGlow() {
+  if (_glowTimer) { clearInterval(_glowTimer); _glowTimer = null; }
+  _glowEl = null;
+}
+
+function calcSize(n) {
+  const minS = 8, maxS = 30;
+  const maxScore = Math.max(...GRAPH.nodes.map(x => x.score));
+  return minS + (maxS - minS) * Math.pow((n.score || 0) / maxScore, 0.7);
+}
+
+// 统一点击：边 → 关系浮窗；节点 → 原有点选逻辑
+function onChartClick(params) {
+  if (!params) return;
+  if (params.dataType === 'edge' && params.data && params.data._l) {
+    hideFloatCard();  // 关闭节点小卡，聚焦关系
+    showRelFloat(params.event, params.data._l);
+    return;
+  }
+  hideRelFloat();
+  onNodeClick(params);
+}
+
+function onNodeClick(params) {
+  const n = params && params.data;
+  if (!n || !n._n) { exitSelectMode(); return; }  // 点击空白 → 退出点选
+  currentNode = n.name;
+  showDetail(n._n);
+  showFloatCard(n._n);
+  renderGraph();
+}
+
+// ====== 关系浮窗（点击连线） ======
+function getNodeFaction(name) {
+  const n = GRAPH.nodes.find(x => x.name === name);
+  return (n && n.faction) || '未知';
+}
+
+function showRelFloat(ev, link) {
+  const A = link.source, B = link.target;
+  const rel = link.relation || '关联';
+  const key = A < B ? A + '|' + B : B + '|' + A;
+  const det = (RELS && RELS.pairs && RELS.pairs[key]) || null;
+  const f = document.getElementById('relFloat');
+
+  let html = '<button class="rf-close" onclick="hideRelFloat()" title="关闭">✕</button>' +
+    '<div class="rf-head">' +
+    avatarHtml(A, getNodeFaction(A), 'rf-ava') +
+    '<span class="rf-name">' + escapeHtml(A) + '</span>' +
+    '<span class="rf-rel-tag">' + escapeHtml(rel) + '</span>' +
+    '<span class="rf-name">' + escapeHtml(B) + '</span>' +
+    avatarHtml(B, getNodeFaction(B), 'rf-ava') +
+    '</div>';
+
+  const arch = (det && det.archive) || [];
+  if (arch.length) {
+    html += '<div class="rf-sec">干员档案关联</div>';
+    arch.forEach(ar => {
+      html += `<div class="rf-card" onclick="showRelDetail('archive','${escapeAttr(ar.from)}','${escapeAttr(ar.source)}','${escapeAttr(ar.text)}')">
+        <div class="rf-card-src">${escapeHtml(ar.from)} · ${escapeHtml(ar.source)}</div>
+        <div class="rf-card-sum">${escapeHtml(ar.text)}</div>
+      </div>`;
+    });
+  }
+
+  const scenes = (det && det.scenes) || [];
+  if (scenes.length) {
+    html += `<div class="rf-sec">共同经历的剧情（${scenes.length} 幕）</div>`;
+    scenes.slice(0, 6).forEach(sc => {
+      html += `<div class="rf-card" onclick="showRelDetail('scene','${escapeAttr(sc.key)}')">
+        <div class="rf-card-title">${escapeHtml(sc.segment)} · ${escapeHtml(sc.title)}</div>
+        <div class="rf-card-src">${escapeHtml(sc.year || '')}${sc.location ? ' · ' + escapeHtml(sc.location) : ''} · #${sc.order}</div>
+      </div>`;
+    });
+    if (scenes.length > 6) html += `<div class="rf-empty">… 共 ${scenes.length} 幕，右侧详情按时间序展示全部</div>`;
+  }
+  if (!arch.length && !scenes.length) {
+    html += '<div class="rf-empty">暂无档案关联或共同经历记录</div>';
+  }
+  html += '<div class="rf-close-tip">点击卡片 → 右侧详情 · 点空白处关闭</div>';
+  f.innerHTML = html;
+
+  // 定位：跟随点击位置，靠边时翻转
+  const main = document.getElementById('main');
+  const cw = main.clientWidth, ch = main.clientHeight;
+  let x = (ev && ev.offsetX != null ? ev.offsetX : 60) + 18;
+  let y = (ev && ev.offsetY != null ? ev.offsetY : 60) + 18;
+  if (x + 340 > cw - 10) x = Math.max(10, x - 358);
+  if (y + 420 > ch - 10) y = Math.max(10, ch - 430);
+  f.style.left = x + 'px';
+  f.style.top = y + 'px';
+  f.classList.add('show');
+}
+function hideRelFloat() {
+  document.getElementById('relFloat').classList.remove('show');
+}
+
+// ====== 关系详情面板（右侧侧边栏） ======
+function showRelDetail(type, arg1, arg2, arg3) {
+  const panel = document.getElementById('relDetailPanel');
+  document.getElementById('detailCard').classList.remove('show');  // 避免同侧遮挡
+  const body = document.getElementById('rdpBody');
+  const toc = document.getElementById('rdpToc');
+  toc.classList.remove('show'); toc.innerHTML = '';
+  if (type === 'archive') {
+    const from = arg1, source = arg2, snippet = arg3 || '';
+    const node = GRAPH.nodes.find(x => x.name === from);
+    let doc = null;
+    if (RELS && RELS.docs && RELS.docs[from]) {
+      doc = RELS.docs[from].find(x => x.source === source) || null;
+    }
+    body.innerHTML = `
+      <div class="rdp-head">
+        <div style="display:flex;align-items:center;gap:8px;">
+          ${avatarHtml(from, (node && node.faction) || '未知', 'dc-avatar-img')}
+          <div>
+            <div class="rdp-title">${escapeHtml(from)} · ${escapeHtml(source)}</div>
+            <div class="rdp-sub">干员档案 · ${escapeHtml(from)} 提及关联人物</div>
+          </div>
+        </div>
+      </div>
+      ${doc ? `<div class="rdp-body-text">${escapeHtml(doc.text)}</div>` : '<div class="rf-empty">未收录该档案全文</div>'}
+      ${snippet ? `<div class="rdp-sub" style="margin-top:14px;">关联片段</div><div class="rdp-body-text" style="color:#c9b27e;border-left:3px solid var(--accent);padding-left:10px;margin-top:6px;">${escapeHtml(snippet)}</div>` : ''}`;
+  } else {
+    // scene：全幕对话
+    const scene = SCENES && SCENES.scenes ? SCENES.scenes[arg1] : null;
+    if (!scene) { body.innerHTML = '<div class="rf-empty">未找到该幕数据</div>'; }
+    else {
+      body.innerHTML = `
+        <div class="rdp-head">
+          <div class="rdp-title">${escapeHtml(scene.segment || '')} · ${escapeHtml(scene.title || arg1)}</div>
+          <div class="rdp-sub">${escapeHtml(scene.year || '')}${scene.location ? ' · ' + escapeHtml(scene.location) : ''} · #${scene.order}</div>
+          ${scene.summary ? `<div class="rdp-summary">${escapeHtml(scene.summary)}</div>` : ''}
+          <div class="rdp-chips">${(scene.characters || []).map(c => `<span class="rdp-chip">${escapeHtml(c)}</span>`).join('')}</div>
+        </div>`;
+      body.innerHTML += (scene.dialogues || []).map(d => {
+        if (d.s) {
+          return `<div class="rdp-dlg"><div class="rdp-dlg-speaker">${escapeHtml(d.s)}</div><div class="rdp-dlg-text">${escapeHtml(d.t)}</div></div>`;
+        }
+        return `<div class="rdp-dlg"><div class="rdp-dlg-speaker narr">叙述</div><div class="rdp-dlg-narr">${escapeHtml(d.t)}</div></div>`;
+      }).join('') || '<div class="rf-empty">本幕无对话内容</div>';
+      // 左侧章节剧情目录：本幕所在 segment 内全部剧情，按 order 排序，点击切换
+      const segScenes = SCENE_SEG_INDEX[scene.segment] || [];
+      if (segScenes.length > 1) {
+        toc.innerHTML = `<div class="rdp-toc-head">${escapeHtml(scene.segment)}</div>` +
+          segScenes.map(s => {
+            const active = s.key === arg1 ? ' active' : '';
+            return `<div class="rdp-toc-item${active}" onclick="showRelDetail('scene','${escapeAttr(s.key)}')">
+              <span class="o">#${s.order}</span>${escapeHtml(s.title)}
+            </div>`;
+          }).join('');
+        toc.classList.add('show');
+      }
+    }
+  }
+  panel.classList.add('show');
+}
+function closeRelDetail() {
+  document.getElementById('relDetailPanel').classList.remove('show');
+}
+
+// ====== 悬浮卡拖拽（事件委托，内容重建不影响） ======
+function makeDraggable(el, handleSel) {
+  if (!el) return;
+  let sx = 0, sy = 0, ox = 0, oy = 0, dragging = false;
+  el.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    if (!e.target.closest(handleSel)) return;
+    // 排除可点击元素（关闭按钮/卡片）
+    if (e.target.closest('.nfc-close') || e.target.closest('.rdp-close') || e.target.closest('.rf-card')) return;
+    dragging = true;
+    sx = e.clientX; sy = e.clientY;
+    ox = el.offsetLeft; oy = el.offsetTop;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    el.style.left = (ox + e.clientX - sx) + 'px';
+    el.style.top = (oy + e.clientY - sy) + 'px';
+  });
+  document.addEventListener('mouseup', () => { dragging = false; });
+}
+// 人物小卡（左上角）与关系浮窗均可拖拽
+makeDraggable(document.getElementById('nodeFloatCard'), '.nfc-head');
+makeDraggable(document.getElementById('relFloat'), '.rf-head');
+
+// ====== 点选模式：左上角人物悬浮小卡 ======
+function showFloatCard(n) {
+  document.getElementById('nfcAvatar').innerHTML = avatarHtml(n.name, n.faction, 'nfc-avatar');
+  document.getElementById('nfcName').textContent = n.name;
+  document.getElementById('nfcFaction').textContent = '阵营：' + (n.faction || '未知');
+  document.getElementById('nfcProfile').textContent =
+    (n.profile && n.profile.trim()) ? n.profile : ((n.operator ? '干员' : '剧情角色') + '。');
+  const { links } = filterNodes();
+  const rels = links
+    .filter(l => l.source === n.name || l.target === n.name)
+    .sort((a, b) => b.strength - a.strength)
+    .slice(0, 10)
+    .map(l => {
+      const other = l.source === n.name ? l.target : l.source;
+      const rel = l.relation || '关联';
+      return `<span class="nfc-rel-chip" onclick="focusNode('${other.replace(/'/g, "\\'")}')">${escapeHtml(other)} · ${escapeHtml(rel)}</span>`;
+    }).join('');
+  document.getElementById('nfcRels').innerHTML =
+    rels || '<span style="font-size:11px;color:#5c6670;">暂无强关联</span>';
+  document.getElementById('nodeFloatCard').classList.add('show');
+}
+
+function hideFloatCard() {
+  document.getElementById('nodeFloatCard').classList.remove('show');
+}
+
+// 退出点选模式：关闭悬浮小卡 + 详情卡，清空选中，恢复边样式
+function exitSelectMode() {
+  hideFloatCard();
+  document.getElementById('detailCard').classList.remove('show');
+  currentNode = null;
+  renderGraph();
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    hideRelFloat();
+    closeRelDetail();
+    exitSelectMode();
+  }
+});
+
+function showDetail(n) {
+  document.getElementById('dcAvatar').innerHTML = avatarHtml(n.name, n.faction, 'dc-avatar-img');
+  document.getElementById('dcName').textContent = n.name;
+  const typeEl = document.getElementById('dcType');
+  typeEl.textContent = n.operator ? '干员' : 'NPC / BOSS';
+  typeEl.className = 'dc-type ' + (n.operator ? 'op' : 'npc');
+  document.getElementById('dcFaction').textContent = '阵营：' + (n.faction || '未知');
+  document.getElementById('dcStat').innerHTML = `
+    <div class="dc-stat-item"><div class="n">${n.dialogue}</div><div class="l">对话量</div></div>
+    <div class="dc-stat-item"><div class="n">${n.scenes}</div><div class="l">出场幕</div></div>
+    <div class="dc-stat-item"><div class="n">${n.rel_degree}</div><div class="l">关联数</div></div>`;
+  const alters = n.alters && n.alters.length ? n.alters : [];
+  document.getElementById('dcAlters').innerHTML = alters.length
+    ? alters.map(a => `<span class="dc-alter-chip">${a}</span>`).join('')
+    : '<span style="font-size:11px;color:#5c6670;">无独立异格节点</span>';
+  document.getElementById('dcTags').textContent = (n.faction || '未知') + (n.operator ? ' · 干员' : ' · 剧情角色');
+
+  const { links } = filterNodes();
+  const rels = links
+    .filter(l => l.source === n.name || l.target === n.name)
+    .sort((a, b) => b.strength - a.strength)
+    .slice(0, 15)
+    .map(l => {
+      const other = l.source === n.name ? l.target : l.source;
+      // 点击核心关联里的人名 = 点击两人之间的连线 → 弹出关系浮窗（共同经历的剧情章节）
+      return `<span class="dc-rel-chip" onclick="showRelChip(event,'${escapeAttr(n.name)}','${escapeAttr(other)}')">${escapeHtml(other)} <small style="color:#5c6670">${l.strength}</small></span>`;
+    }).join('');
+  document.getElementById('dcRels').innerHTML = rels || '<span style="font-size:11px;color:#5c6670;">暂无强关联</span>';
+  document.getElementById('detailCard').classList.add('show');
+}
+
+// 核心关联点击：等价于点击两人之间的连线，弹出关系浮窗（含共同经历的剧情章节）
+function showRelChip(ev, a, b) {
+  const link = GRAPH.links.find(l => (l.source === a && l.target === b) || (l.source === b && l.target === a));
+  if (!link) { focusNode(b); return; }
+  const main = document.getElementById('main');
+  const rect = main.getBoundingClientRect();
+  const fakeEv = ev && ev.clientX != null
+    ? { offsetX: ev.clientX - rect.left, offsetY: ev.clientY - rect.top }
+    : null;
+  showRelFloat(fakeEv, link);
+}
+
+function focusNode(name) {
+  currentNode = name;
+  renderGraph();
+  const node = GRAPH.nodes.find(x => x.name === name);
+  if (node) { showDetail(node); showFloatCard(node); }
+}
+
+function closeDetail() {
+  exitSelectMode();
+}
+
+// ====== 视图切换 ======
+function switchView(view) {
+  document.getElementById('tabGraph').classList.toggle('active', view === 'graph');
+  document.getElementById('tabTimeline').classList.toggle('active', view === 'timeline');
+  document.getElementById('graphView').style.display = view === 'graph' ? 'flex' : 'none';
+  document.getElementById('tlView').style.display = view === 'timeline' ? 'flex' : 'none';
+  if (view === 'graph' && chart) chart.resize();
+}
+
+// ====== 时间线 UI ======
+function initTimelineUI() {
+  // 角色列表
+  const list = document.getElementById('tlCharList');
+  // 只列核心角色 + 有轨迹的
+  const coreSet = new Set(GRAPH.core_nodes || []);
+  const chars = GRAPH.nodes
+    .filter(n => coreSet.has(n.name) && TIMELINE.char_timelines[n.name])
+    .sort((a, b) => b.score - a.score);
+
+  function renderCharList(filter) {
+    list.innerHTML = '';
+    chars.forEach(n => {
+      if (filter && !n.name.includes(filter)) return;
+      const item = document.createElement('div');
+      item.className = 'tl-char' + (tlCurrentChar === n.name ? ' active' : '');
+      const av = AVATARS[n.name];
+      const first = (n.name || '?').trim()[0] || '?';
+      item.innerHTML = `
+        ${av
+          ? `<img class="tl-avatar" src="${av}" alt="" loading="lazy" referrerpolicy="no-referrer">`
+          : `<span class="tl-avatar placeholder" style="background:${factionColor(n.faction)}">${first}</span>`}
+        <span>${n.name}</span><span class="tag ${n.operator ? 'op' : 'npc'}">${n.operator ? '干员' : 'NPC'}</span>`;
+      item.onclick = () => showTimeline(n.name);
+      list.appendChild(item);
+    });
+  }
+  renderCharList('');
+
+  document.getElementById('tlSearch').addEventListener('input', e => renderCharList(e.target.value.trim()));
+
+  // 段落筛选
+  const segFilter = document.getElementById('tlSegmentFilter');
+  const segments = new Set();
+  Object.values(TIMELINE.char_timelines).forEach(tl => tl.forEach(s => segments.add(s.segment)));
+  [...segments].sort().forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s; opt.textContent = s;
+    segFilter.appendChild(opt);
+  });
+
+  segFilter.addEventListener('change', renderTimeline);
+  document.getElementById('tlLocFilter').addEventListener('input', renderTimeline);
+}
+
+function showTimeline(charName) {
+  tlCurrentChar = charName;
+  switchView('timeline');
+  // 高亮角色列表
+  document.querySelectorAll('#tlCharList .tl-char').forEach(c => {
+    c.classList.toggle('active', c.textContent.trim().startsWith(charName));
+  });
+  renderTimeline();
+}
+
+function renderTimeline() {
+  const main = document.getElementById('tlMain');
+  if (!tlCurrentChar || !TIMELINE.char_timelines[tlCurrentChar]) {
+    main.innerHTML = '<div class="tl-empty">该角色没有可展示的剧情轨迹</div>';
+    return;
+  }
+  const charNode = GRAPH.nodes.find(n => n.name === tlCurrentChar);
+  const segFilter = document.getElementById('tlSegmentFilter').value;
+  const locFilter = document.getElementById('tlLocFilter').value.trim();
+
+  let tl = TIMELINE.char_timelines[tlCurrentChar];
+  if (segFilter) tl = tl.filter(s => s.segment === segFilter);
+  if (locFilter) tl = tl.filter(s => (s.location || '').includes(locFilter));
+
+  if (tlTreeMode) renderTimelineTree(main, tl, charNode);
+  else renderTimelineSingle(main, tl, charNode);
+}
+
+// 头部（角色名 + 统计）—— 单列/树状共用
+function renderTlHeader(tl, charNode) {
+  const segs = new Set(tl.map(s => s.segment));
+  const locs = new Set(tl.map(s => s.location).filter(Boolean));
+  return `
+    <div class="tl-header">
+      <h2>${tlCurrentChar}</h2>
+      <div class="sub">${charNode ? (charNode.operator ? '干员' : '剧情 NPC / BOSS') : ''} · ${charNode ? (charNode.faction || '') : ''}</div>
+      <div class="tl-summary">
+        <div>出场幕 <b>${tl.length}</b></div>
+        <div>涉及段落 <b>${segs.size}</b></div>
+        <div>到访地点 <b>${locs.size}</b></div>
+        <div>对话量 <b>${charNode ? charNode.dialogue : '-'}</b></div>
+      </div>
+    </div>`;
+}
+
+// 单张卡片 HTML（不含外层 tl-item/tl-dot）
+function buildTlCardHtml(s, isMain) {
+  const sceneKey = s.stage || s.title;
+  const scene = SCENES && SCENES.scenes ? SCENES.scenes[sceneKey] : null;
+  const selfLines = scene ? scene.dialogues.filter(d => d.s === tlCurrentChar && d.t) : [];
+  const tooltip = scene ? {
+    title: s.segment + ' · ' + s.title,
+    year: scene.year || '',
+    summary: scene.summary || '',
+    chars: (scene.characters || []).slice(0, 12)
+  } : null;
+  const keySafe = sceneKey.replace(/[^a-zA-Z0-9-]/g, '_');
+  const keyEsc = sceneKey.replace(/'/g, "\\'");
+  return `
+    <div class="tl-card"
+         data-tooltip='${escapeAttr(JSON.stringify(tooltip))}'
+         data-scenekey="${escapeAttr(sceneKey)}">
+      <div class="tl-card-top">
+        <span class="tl-order">#${s.order}</span>
+        ${scene && scene.year ? `<span class="tl-year">${escapeHtml(scene.year)}</span>` : ''}
+        <span class="tl-segment ${isMain ? 'main' : ''}">${s.segment}</span>
+        <span class="tl-stage">${s.title}</span>
+        <span class="tl-loc">${s.location || ''}</span>
+      </div>
+      ${s.line ? `<div class="tl-line">${escapeHtml(s.line)}</div>` : '<div class="tl-noline">（该幕以叙述/动作呈现，无独立台词）</div>'}
+      <div class="tl-actions">
+        ${selfLines.length ? `<button class="tl-btn" onclick="toggleDialog(event, '${keyEsc}')">折叠/展开 本角色对话 (${selfLines.length})</button>` : ''}
+        <button class="tl-btn" onclick="openScenePanel(event, '${keyEsc}')">全幕对话</button>
+      </div>
+      <div class="tl-dialog" id="dlg-${keySafe}" style="display:none;">
+        ${selfLines.map(l => `<div class="tl-dialog-line"><span class="dlg-speaker self">${escapeHtml(tlCurrentChar)}</span><span class="dlg-text">${escapeHtml(l.t)}</span></div>`).join('')}
+      </div>
+      ${s.coactors && s.coactors.length ? `
+        <div class="tl-co">
+          <span class="tl-co-label">同场角色：</span>
+          ${s.coactors.map(c => `<span class="tl-co-chip" onclick="showTimeline('${c.replace(/'/g, "\\'")}')">${c}</span>`).join('')}
+        </div>` : ''}
+    </div>`;
+}
+
+// 绑定悬停 tooltip + 点击全幕对话
+function bindTlCardEvents(scope) {
+  scope.querySelectorAll('.tl-card').forEach(card => {
+    const tip = JSON.parse(card.dataset.tooltip || 'null');
+    if (!tip) return;
+    card.addEventListener('mouseenter', (e) => showTlTooltip(e, tip));
+    card.addEventListener('mousemove', (e) => moveTlTooltip(e));
+    card.addEventListener('mouseleave', hideTlTooltip);
+    card.addEventListener('click', () => openScenePanel(null, card.dataset.scenekey));
+  });
+}
+
+// 单列模式（默认）
+function renderTimelineSingle(main, tl, charNode) {
+  let html = renderTlHeader(tl, charNode);
+  html += '<div class="timeline">';
+  tl.forEach(s => {
+    const isMain = s.segment.startsWith('主线');
+    html += `
+      <div class="tl-item">
+        <div class="tl-dot ${isMain ? 'main' : 'event'}"></div>
+        ${buildTlCardHtml(s, isMain)}
+      </div>`;
+  });
+  html += '</div>';
+  main.innerHTML = html;
+  main.scrollTop = 0;
+  bindTlCardEvents(main);
+}
+
+// 树状双列模式：主线一列、其他剧情一列，纵向统一坐标轴
+function renderTimelineTree(main, tl, charNode) {
+  const ordered = [...tl].sort((a, b) => a.order - b.order);
+  const mainCount = ordered.filter(s => s.segment.startsWith('主线')).length;
+  const evtCount = ordered.length - mainCount;
+
+  let html = renderTlHeader(tl, charNode);
+  html += `
+    <div class="tl-tree">
+      <div class="tl-tree-head">
+        <div class="tl-tree-scale-h">时间轴</div>
+        <div class="tl-tree-col-h main">★ 主线剧情（${mainCount} 幕）</div>
+        <div class="tl-tree-col-h event">◈ 其他剧情（${evtCount} 幕）</div>
+      </div>
+      <div class="tl-tree-body">`;
+
+  ordered.forEach(s => {
+    const isMain = s.segment.startsWith('主线');
+    const scene = SCENES && SCENES.scenes ? SCENES.scenes[s.stage || s.title] : null;
+    html += `
+      <div class="tl-tree-row">
+        <div class="tl-tree-scale">
+          <div class="ts-order">#${s.order}</div>
+          ${scene && scene.year ? `<div class="ts-year">${escapeHtml(scene.year)}</div>` : ''}
+        </div>
+        <div class="tl-tree-lane main">${isMain ? buildTlCardHtml(s, true) : ''}</div>
+        <div class="tl-tree-lane event">${isMain ? '' : buildTlCardHtml(s, false)}</div>
+      </div>`;
+  });
+
+  html += '</div></div>';
+  main.innerHTML = html;
+  main.scrollTop = 0;
+  bindTlCardEvents(main);
+}
+
+// 切换显示模式：false=单列 true=树状
+function setTlMode(tree) {
+  tlTreeMode = !!tree;
+  document.getElementById('tlModeSingle').classList.toggle('active', !tlTreeMode);
+  document.getElementById('tlModeTree').classList.toggle('active', tlTreeMode);
+  renderTimeline();
+}
+
+// 折叠/展开 本角色对话
+function toggleDialog(ev, sceneKey) {
+  ev.stopPropagation();
+  const dlg = document.getElementById('dlg-' + sceneKey.replace(/[^a-zA-Z0-9-]/g,'_'));
+  if (!dlg) return;
+  dlg.style.display = dlg.style.display === 'none' ? 'block' : 'none';
+}
+
+// ====== 全幕对话侧栏 ======
+function openScenePanel(ev, sceneKey) {
+  if (ev) ev.stopPropagation();
+  const scene = SCENES && SCENES.scenes ? SCENES.scenes[sceneKey] : null;
+  if (!scene) return;
+  document.getElementById('spHeader').innerHTML = `
+    <span class="sp-segment">${escapeHtml(scene.segment || '')}</span>
+    ${scene.year ? `<span class="sp-year">${escapeHtml(scene.year)}</span>` : ''}
+    <div class="sp-title">${escapeHtml(scene.title || sceneKey)}</div>
+    <div class="sp-loc">${escapeHtml(scene.location || '')} · #${scene.order}</div>
+    <div class="sp-summary">${escapeHtml(scene.summary || '')}</div>
+    <div class="sp-chars">
+      ${(scene.characters || []).map(c => `<span class="sp-char-chip" onclick="showTimeline('${c.replace(/'/g, "\\'")}')">${escapeHtml(c)}</span>`).join('')}
+    </div>`;
+  const dlg = (scene.dialogues || []).map(d => {
+    if (d.s) {
+      return `<div class="sp-dlg">
+        <div class="sp-dlg-speaker">${escapeHtml(d.s)}</div>
+        <div class="sp-dlg-text">${escapeHtml(d.t)}</div>
+      </div>`;
+    }
+    return `<div class="sp-dlg">
+      <div class="sp-dlg-speaker narr">叙述</div>
+      <div class="sp-dlg-narr">${escapeHtml(d.t)}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('spBody').innerHTML = dlg || '<div class="tl-empty">本幕无对话内容</div>';
+  document.getElementById('tlScenePanel').classList.add('show');
+  // 同步打开章节目录侧栏（剧情回溯）
+  openChapterPanel(sceneKey);
+}
+
+// ====== 章节目录侧栏（剧情回溯） ======
+function buildSegmentIndex() {
+  segmentIndex = {};
+  if (!SCENES || !SCENES.scenes) return;
+  Object.entries(SCENES.scenes).forEach(([key, s]) => {
+    const seg = s.segment || '未分类';
+    if (!segmentIndex[seg]) segmentIndex[seg] = [];
+    segmentIndex[seg].push({
+      key,
+      order: s.order,
+      title: s.title || key,
+      segment: seg,
+      year: s.year || '',
+      location: s.location || '',
+      summary: s.summary || '',
+      characters: s.characters || []
+    });
+  });
+  Object.values(segmentIndex).forEach(arr => arr.sort((a, b) => a.order - b.order));
+}
+
+function openChapterPanel(sceneKey) {
+  if (!SCENES || !SCENES.scenes) return;
+  const scene = SCENES.scenes[sceneKey];
+  if (!scene) return;
+  const seg = scene.segment || '未分类';
+  if (!segmentIndex || !segmentIndex[seg]) return;
+
+  chapterCurrentKey = sceneKey;
+  const scenes = segmentIndex[seg];
+  chapterScenes = scenes;
+
+  document.getElementById('cpHeader').innerHTML = `
+    <div class="cp-segment">${escapeHtml(seg)}</div>
+    <div class="cp-count">共 ${scenes.length} 幕 · 当前位置：#${scene.order} ${escapeHtml(scene.title || sceneKey)}${scene.year ? ' · ' + escapeHtml(scene.year) : ''}</div>`;
+
+  let html = '';
+  scenes.forEach(item => {
+    const active = item.key === sceneKey ? ' active' : '';
+    html += `<div class="cp-item${active}" data-key="${escapeAttr(item.key)}" data-tooltip='${escapeAttr(JSON.stringify({
+      title: item.segment + ' · ' + item.title,
+      year: item.year || '',
+      summary: item.summary || '',
+      chars: (item.characters || []).slice(0, 10)
+    }))}'>
+      <span class="cp-order">#${item.order}</span>
+      ${item.year ? `<span class="cp-year">${escapeHtml(item.year)}</span>` : ''}
+      <span class="cp-title">${escapeHtml(item.title)}</span>
+      ${item.location ? `<span class="cp-loc">${escapeHtml(item.location)}</span>` : ''}
+    </div>`;
+  });
+  const body = document.getElementById('cpBody');
+  body.innerHTML = html;
+  document.getElementById('tlChapterPanel').classList.add('show');
+
+  body.querySelectorAll('.cp-item').forEach(item => {
+    const tip = JSON.parse(item.dataset.tooltip || 'null');
+    if (tip) {
+      item.addEventListener('mouseenter', (e) => showTlTooltip(e, tip));
+      item.addEventListener('mousemove', (e) => moveTlTooltip(e));
+      item.addEventListener('mouseleave', hideTlTooltip);
+    }
+    item.addEventListener('click', () => {
+      const key = item.dataset.key;
+      openScenePanel(null, key); // 打开该幕全幕对话，并同步章节高亮
+    });
+  });
+
+  // 滚动到当前幕
+  const active = body.querySelector('.cp-item.active');
+  if (active) active.scrollIntoView({ block: 'nearest' });
+}
+
+function closeChapterPanel() {
+  document.getElementById('tlChapterPanel').classList.remove('show');
+  hideTlTooltip();
+}
+
+function closeScenePanel() {
+  document.getElementById('tlScenePanel').classList.remove('show');
+  closeChapterPanel();
+}
+
+// ====== 悬停梗概 tooltip ======
+function showTlTooltip(e, tip) {
+  const tt = document.getElementById('tlTooltip');
+  tt.innerHTML = `
+    <div class="tt-title">${escapeHtml(tip.title)}</div>
+    ${tip.year ? `<div class="tt-year">${escapeHtml(tip.year)}</div>` : ''}
+    ${tip.summary ? `<div class="tt-sum">${escapeHtml(tip.summary)}</div>` : ''}
+    <div class="tt-chars-label">出场人物：</div>
+    <div class="tt-chars">${(tip.chars || []).map(c => `<span class="tt-char">${escapeHtml(c)}</span>`).join('')}</div>`;
+  tt.style.display = 'block';
+  moveTlTooltip(e);
+}
+function moveTlTooltip(e) {
+  const tt = document.getElementById('tlTooltip');
+  const x = e.clientX + 14, y = e.clientY + 14;
+  tt.style.left = Math.min(x, window.innerWidth - 360) + 'px';
+  tt.style.top = Math.min(y, window.innerHeight - 200) + 'px';
+}
+function hideTlTooltip() {
+  document.getElementById('tlTooltip').style.display = 'none';
+}
+
+function escapeAttr(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function escapeHtml(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// 启动
+window.addEventListener('DOMContentLoaded', loadAll);
+</script>
+</body>
+</html>
